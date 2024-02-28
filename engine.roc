@@ -7,7 +7,7 @@ app "engine"
         pf.Task.{ Task },
         pf.Path,
         pf.File,
-        "page.htmr" as template : List U8,
+        "page.htmr" as template : Str,
     ]
     provides [main] to pf
 
@@ -23,5 +23,14 @@ output =
         imports []
 
     page =
-        "foo"
+        \"""
+    $(indent template)
+        \"""
+        
     """
+
+indent = \in ->
+    Str.split in "\n"
+    |> List.map \str ->
+        Str.concat "    " str
+    |> Str.joinWith "\n"
