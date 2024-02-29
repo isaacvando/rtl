@@ -7,16 +7,25 @@ app "engine"
         pf.Task.{ Task },
         pf.Path,
         pf.File,
-        "page.htmr" as template : Str,
+        Parser.{Ir},
+        "page.htmr" as template : List U8,
     ]
     provides [main] to pf
 
 main =
-    File.writeUtf8 (Path.fromStr "Pages.roc") output
+    File.writeUtf8 (Path.fromStr "Pages.roc") (compile template)
     |> Task.onErr \e ->
         Stdout.line "Error writing file: $(Inspect.toStr e)"
 
-output =
+
+compile : List U8 -> Str
+compile = \temp -> 
+    Parser.parse temp
+    |> generate
+
+generate : Ir -> Str
+generate = \ir -> 
+    body = ""
     """
     interface Pages
         exposes [page]
@@ -24,10 +33,12 @@ output =
 
     page =
         \"""
-    $(indent template)
+    $(body)
         \"""
         
     """
+    
+
 
 indent = \in ->
     Str.split in "\n"
