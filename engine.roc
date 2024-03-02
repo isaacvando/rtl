@@ -7,7 +7,7 @@ app "engine"
         pf.Task.{ Task },
         pf.Path,
         pf.File,
-        Parser.{Ir},
+        Parser.{ Ir },
         "page.htmr" as template : List U8,
     ]
     provides [main] to pf
@@ -16,16 +16,21 @@ main =
     File.writeUtf8 (Path.fromStr "Pages.roc") (compile template)
     |> Task.onErr \e ->
         Stdout.line "Error writing file: $(Inspect.toStr e)"
-
+    |> Task.await \_ -> 
+        Stdout.line "Generated Pages.roc"
 
 compile : List U8 -> Str
-compile = \temp -> 
+compile = \temp ->
     Parser.parse temp
     |> generate
 
 generate : Ir -> Str
-generate = \ir -> 
-    body = ""
+generate = \ir ->
+    body = List.walk ir [] \state, elem ->
+        when elem is
+            Text t -> List.concat state t
+            Interpolation i ->
+                List.join [state, ['$', '('], i, [')']]
     """
     interface Pages
         exposes [page]
@@ -33,15 +38,19 @@ generate = \ir ->
 
     page =
         \"""
-    $(body)
+    $(body |> Str.fromUtf8 |> unwrap |> indent)
         \"""
         
     """
-    
-
 
 indent = \in ->
     Str.split in "\n"
     |> List.map \str ->
         Str.concat "    " str
     |> Str.joinWith "\n"
+
+
+unwrap = \x ->
+    when x is
+        Err _ -> crash "bad unwrap"
+        Ok v -> v
