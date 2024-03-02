@@ -23,11 +23,32 @@ parseArguments = \ir ->
     |> Set.toList
 
 getArgs : List U8 -> List Str
-getArgs = \str -> []
+getArgs = \input ->
+    getArgsHelp = \args, in ->
+        when in is
+            [_, .. as rest] ->
+                when identifier in is
+                    Err _ -> getArgsHelp args rest
+                    Ok ident -> getArgsHelp (List.append args ident.val) ident.input
 
-# expect getArgs "foo" == ["foo"]
-# expect getArgs "foo bar" == ["foo", "bar"]
-# expect getArgs "foo+bar" == ["foo", "bar"]
+            _ -> args
+
+    getArgsHelp [] input
+    |> List.map \elem ->
+        Str.fromUtf8 elem |> unwrap
+
+expect
+    result = "foo" |> Str.toUtf8 |> getArgs
+    result == ["foo"]
+expect
+    result = "foo bar247 baz" |> Str.toUtf8 |> getArgs
+    result == ["foo", "bar247", "baz"]
+expect
+    result = "foo+bar" |> Str.toUtf8 |> getArgs
+    result == ["foo", "bar"]
+expect
+    result = "myResult |> Result.map \r -> r * 2" |> Str.toUtf8 |> getArgs
+    result == ["myResult"]
 
 identifier : List U8 -> Result (Parser (List U8)) {}
 identifier = \input ->
