@@ -13,5 +13,5 @@ main = \req ->
     when Str.split req.url "/" is
         [_, "favicon.svg"] -> Task.ok { status: 200, headers: [Http.header "Content-Type" "image/svg+xml"], body: favicon }
         _ ->
-            body = Pages.page |> Str.toUtf8
+            body = Pages.page {first: "Isaac", last: "Van Doren"} |> Str.toUtf8
             Task.ok { status: 200, headers: [Http.header "Content-Type" "text/html"], body }

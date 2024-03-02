@@ -2,7 +2,7 @@ interface Pages
     exposes [page]
     imports []
 
-page =
+page = \{ first, last } ->
     """
     <!DOCTYPE html>
     <html>
@@ -13,10 +13,9 @@ page =
     </head>
     <body>
         <div>
-            <h1>Hello $(name)</h1>
+            <h1>Hello, $(first) $(last)!</h1>
         </div>
     </body>
     </html>
-    
     """
     

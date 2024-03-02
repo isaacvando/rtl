@@ -31,17 +31,51 @@ generate = \ir ->
             Text t -> List.concat state t
             Interpolation i ->
                 List.join [state, ['$', '('], i, [')']]
+        
     """
     interface Pages
         exposes [page]
         imports []
 
-    page =
+    page = \\{ $(getArgsFromIr ir |> Str.joinWith ", ") } ->
         \"""
-    $(body |> Str.fromUtf8 |> unwrap |> indent)
-        \"""
+    $(body |> Str.fromUtf8 |> unwrap |> indent)\"""
         
     """
+
+# TODO: this needs to handle nested fields like foo.bar
+getArgsFromIr : Ir -> List Str
+getArgsFromIr = \ir -> 
+    List.walk ir (Set.empty {}) \args, node -> 
+        when node is
+            Interpolation i -> 
+                str = Str.fromUtf8 i |> unwrap
+                Set.union args (getArgsFromStr str)
+            Text _ -> args
+    |> Set.toList
+
+# TODO: this should only accept identifiers, and should be aware of strings and string interpolations
+getArgsFromStr : Str -> Set Str
+getArgsFromStr = \str -> 
+    Str.split str " "
+    |> List.keepIf \s -> 
+        isAlphaNumeric s && containsAlpha s
+    |> Set.fromList
+
+containsAlpha : Str -> Bool
+containsAlpha = \str -> 
+    Str.toUtf8 str
+    |> List.any \c -> 
+        (65 <= c && c<= 90)
+        || (97 <= c && c <= 122)
+
+isAlphaNumeric : Str -> Bool
+isAlphaNumeric = \str -> 
+    Str.toUtf8 str
+    |> List.all \c -> 
+        (48 <= c && c <= 57)
+        || (65 <= c && c<= 90)
+        || (97 <= c && c <= 122)
 
 indent = \in ->
     Str.split in "\n"
