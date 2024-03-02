@@ -2,7 +2,7 @@ interface Pages
     exposes [page]
     imports []
 
-page = \{ first, last } ->
+page = \{  } ->
     """
     <!DOCTYPE html>
     <html>

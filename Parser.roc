@@ -5,12 +5,106 @@ interface Parser
 Ir : List Node
 Node : [Text (List U8), Interpolation (List U8)]
 
-parse : List U8 -> Ir
+parse : List U8 -> { ir : Ir, args : List Str }
 parse = \input ->
-    template { input, val: [] }
+    ir = template { input, val: [] }
+    {
+        ir,
+        args: parseArguments ir,
+    }
+
+# TODO: this needs to handle nested fields like foo.bar
+parseArguments : Ir -> List Str
+parseArguments = \ir ->
+    List.walk ir (Set.empty {}) \args, node ->
+        when node is
+            Interpolation i -> args
+            Text _ -> args
+    |> Set.toList
+
+getArgs : List U8 -> List Str
+getArgs = \str -> []
+
+# expect getArgs "foo" == ["foo"]
+# expect getArgs "foo bar" == ["foo", "bar"]
+# expect getArgs "foo+bar" == ["foo", "bar"]
+
+identifier : List U8 -> Result (Parser (List U8)) {}
+identifier = \input ->
+    when input is
+        [c, ..] if 97 <= c && c <= 122 -> chompWhile input isAlphaNumeric |> Ok
+        _ -> Err {}
 
 expect
-    result = "<i>{{x}}</i>" |> Str.toUtf8 |> parse
+    input = "foo2" |> Str.toUtf8
+    result = identifier input
+    identToStr result == Ok { input: [], val: "foo2" }
+
+expect
+    input = ".bar" |> Str.toUtf8
+    result = identifier input
+    identToStr result == Err {}
+
+expect
+    input = "Baz" |> Str.toUtf8
+    result = identifier input
+    identToStr result == Err {}
+
+expect
+    input = "a" |> Str.toUtf8
+    result = identifier input
+    identToStr result == Ok { input: [], val: "a" }
+
+expect
+    input = "2foo" |> Str.toUtf8
+    result = identifier input
+    identToStr result == Err {}
+
+identToStr = \result ->
+    Result.map result \{ input, val } ->
+        { input, val: Str.fromUtf8 val |> unwrap }
+
+chompWhile = \input, predicate ->
+    chomp = \parser ->
+        when parser.input is
+            [c, .. as rest] if predicate c -> chomp { input: rest, val: List.append parser.val c }
+            _ -> parser
+
+    chomp { input, val: [] }
+
+# TODO: this should only accept identifiers, and should be aware of strings and string interpolations
+# getArgsFromStr : Str -> Set Str
+# getArgsFromStr = \str ->
+#     Str.split str " "
+#     |> List.keepIf \s ->
+#         isAlphaNumeric s && startsWithAlpha s
+#     |> Set.fromList
+
+# isIdentifier : Str -> Bool
+# isIdentifier = \str ->
+#     bytes = Str.toUtf8 str
+#     when bytes is
+#         [c, ..] if 97 <= c && c <= 122 -> isAlphaNumeric bytes
+#         _ -> Bool.false
+
+# startsWithAlpha : Str -> Bool
+# startsWithAlpha = \str ->
+#     Str.toUtf8 str
+#     |> List.any \c -> Bool.true
+
+# isAlpha : U8 -> Bool
+# isAlpha = \c ->
+#     (65 <= c && c <= 90)
+#     || (97 <= c && c <= 122)
+
+isAlphaNumeric : U8 -> Bool
+isAlphaNumeric = \c ->
+    (48 <= c && c <= 57)
+    || (65 <= c && c <= 90)
+    || (97 <= c && c <= 122)
+
+expect
+    result = "<i>{{x}}</i>" |> Str.toUtf8 |> parse |> .ir
     irToStrs result == [Text "<i>", Interpolation "x", Text "</i>"]
 
 irToStrs = \ir ->
