@@ -2,7 +2,7 @@ interface Pages
     exposes [page]
     imports []
 
-page = \{  } ->
+page = \{} ->
     """
     <!DOCTYPE html>
     <html>
@@ -13,9 +13,10 @@ page = \{  } ->
     </head>
     <body>
         <div>
+            {|if true |}
             <h1>Hello, $(first) $(last)!</h1>
+            {|endif|}
         </div>
     </body>
     </html>
     """
-    

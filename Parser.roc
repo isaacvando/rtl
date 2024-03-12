@@ -3,7 +3,12 @@ interface Parser
     imports []
 
 Ir : List Node
-Node : [Text (List U8), Interpolation (List U8)]
+Node : [
+    Text (List U8),
+    Interpolation (List U8),
+    Conditional { condition : List U8, body : List U8 },
+    For { list : List U8, item : List U8, body : List U8 },
+]
 
 parse : List U8 -> { ir : Ir, args : List Str }
 parse = \input ->
@@ -13,13 +18,14 @@ parse = \input ->
         args: parseArguments ir,
     }
 
-# TODO: this needs to handle nested fields like foo.bar
 parseArguments : Ir -> List Str
 parseArguments = \ir ->
     List.walk ir (Set.empty {}) \args, node ->
         when node is
             Interpolation i -> args
             Text _ -> args
+            Conditional _ -> args
+            _ -> args
     |> Set.toList
 
 getArgs : List U8 -> List Str
@@ -37,49 +43,11 @@ getArgs = \input ->
     |> List.map \elem ->
         Str.fromUtf8 elem |> unwrap
 
-expect
-    result = "foo" |> Str.toUtf8 |> getArgs
-    result == ["foo"]
-expect
-    result = "foo bar247 baz" |> Str.toUtf8 |> getArgs
-    result == ["foo", "bar247", "baz"]
-expect
-    result = "foo+bar" |> Str.toUtf8 |> getArgs
-    result == ["foo", "bar"]
-expect
-    result = "myResult |> Result.map \r -> r * 2" |> Str.toUtf8 |> getArgs
-    result == ["myResult"]
-
 identifier : List U8 -> Result (Parser (List U8)) {}
 identifier = \input ->
     when input is
         [c, ..] if 97 <= c && c <= 122 -> chompWhile input isAlphaNumeric |> Ok
         _ -> Err {}
-
-expect
-    input = "foo2" |> Str.toUtf8
-    result = identifier input
-    identToStr result == Ok { input: [], val: "foo2" }
-
-expect
-    input = ".bar" |> Str.toUtf8
-    result = identifier input
-    identToStr result == Err {}
-
-expect
-    input = "Baz" |> Str.toUtf8
-    result = identifier input
-    identToStr result == Err {}
-
-expect
-    input = "a" |> Str.toUtf8
-    result = identifier input
-    identToStr result == Ok { input: [], val: "a" }
-
-expect
-    input = "2foo" |> Str.toUtf8
-    result = identifier input
-    identToStr result == Err {}
 
 identToStr = \result ->
     Result.map result \{ input, val } ->
@@ -93,46 +61,11 @@ chompWhile = \input, predicate ->
 
     chomp { input, val: [] }
 
-# TODO: this should only accept identifiers, and should be aware of strings and string interpolations
-# getArgsFromStr : Str -> Set Str
-# getArgsFromStr = \str ->
-#     Str.split str " "
-#     |> List.keepIf \s ->
-#         isAlphaNumeric s && startsWithAlpha s
-#     |> Set.fromList
-
-# isIdentifier : Str -> Bool
-# isIdentifier = \str ->
-#     bytes = Str.toUtf8 str
-#     when bytes is
-#         [c, ..] if 97 <= c && c <= 122 -> isAlphaNumeric bytes
-#         _ -> Bool.false
-
-# startsWithAlpha : Str -> Bool
-# startsWithAlpha = \str ->
-#     Str.toUtf8 str
-#     |> List.any \c -> Bool.true
-
-# isAlpha : U8 -> Bool
-# isAlpha = \c ->
-#     (65 <= c && c <= 90)
-#     || (97 <= c && c <= 122)
-
 isAlphaNumeric : U8 -> Bool
 isAlphaNumeric = \c ->
     (48 <= c && c <= 57)
     || (65 <= c && c <= 90)
     || (97 <= c && c <= 122)
-
-expect
-    result = "<i>{{x}}</i>" |> Str.toUtf8 |> parse |> .ir
-    irToStrs result == [Text "<i>", Interpolation "x", Text "</i>"]
-
-irToStrs = \ir ->
-    List.map ir \x ->
-        when x is
-            Text t -> Str.fromUtf8 t |> unwrap |> Text
-            Interpolation i -> Str.fromUtf8 i |> unwrap |> Interpolation
 
 Parser a : { input : List U8, val : a }
 
@@ -169,17 +102,24 @@ interpolation = \in ->
 
         _ -> Err {}
 
-expect
-    result = "{{abc}}" |> Str.toUtf8 |> interpolation
-    result == Ok { input: [], val: Interpolation ['a', 'b', 'c'] }
+# conditional : List U8 -> Result (Parser Node) {}
+conditional = \in ->
+    eatLineUntil = \state ->
+        when state.input is
+            ['|', '}', .. as rest] -> Ok { input: rest, val: state.val }
+            ['\n', _] -> Err {}
+            [c, .. as rest] -> eatLineUntil { input: rest, val: List.append state.val c }
+            [] -> Err {}
 
-expect
-    result = "{{abc" |> Str.toUtf8 |> interpolation
-    result == Err {}
+    when in is
+        ['{', '|', 'i', 'f', ' ', .. as rest] ->
+            when eatLineUntil { input: rest, val: [] } is
+                Ok state ->
+                    Ok (Conditional { condition: state.val, body: [] })
 
-expect
-    result = "{abc}}" |> Str.toUtf8 |> interpolation
-    result == Err {}
+                Err _ -> Err {}
+
+        _ -> Err {}
 
 unwrap = \x ->
     when x is

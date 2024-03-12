@@ -16,7 +16,7 @@ main =
     File.writeUtf8 (Path.fromStr "Pages.roc") (compile template)
     |> Task.onErr \e ->
         Stdout.line "Error writing file: $(Inspect.toStr e)"
-    |> Task.await \_ -> 
+    |> Task.await \_ ->
         Stdout.line "Generated Pages.roc"
 
 compile : List U8 -> Str
@@ -24,14 +24,17 @@ compile = \temp ->
     Parser.parse temp
     |> generate
 
-generate : {ir: Ir, args: List Str} -> Str
-generate = \{ir, args} ->
+generate : { ir : Ir, args : List Str } -> Str
+generate = \{ ir, args } ->
     body = List.walk ir [] \state, elem ->
         when elem is
             Text t -> List.concat state t
             Interpolation i ->
                 List.join [state, ['$', '('], i, [')']]
-        
+
+            Conditional _ -> state
+            _ -> state
+
     """
     interface Pages
         exposes [page]
@@ -48,7 +51,6 @@ indent = \in ->
     |> List.map \str ->
         Str.concat "    " str
     |> Str.joinWith "\n"
-
 
 unwrap = \x ->
     when x is
