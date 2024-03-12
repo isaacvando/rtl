@@ -1,8 +1,7 @@
 interface Parser
-    exposes [parse, Ir]
+    exposes [parse, Node]
     imports []
 
-Ir : List Node
 Node : [
     Text (List U8),
     Interpolation (List U8),
@@ -10,15 +9,13 @@ Node : [
     For { list : List U8, item : List U8, body : List U8 },
 ]
 
-parse : List U8 -> { ir : Ir, args : List Str }
+parse : List U8 -> { nodes: List Node, args : List Str }
 parse = \input ->
-    ir = template { input, val: [] }
-    {
-        ir,
-        args: parseArguments ir,
-    }
+    nodes = template { input, val: [] }
+    args = parseArguments nodes
+    {nodes, args}
 
-parseArguments : Ir -> List Str
+parseArguments : List Node -> List Str
 parseArguments = \ir ->
     List.walk ir (Set.empty {}) \args, node ->
         when node is
@@ -69,7 +66,6 @@ isAlphaNumeric = \c ->
 
 Parser a : { input : List U8, val : a }
 
-template : Parser Ir -> Ir
 template = \state ->
     when interpolation state.input is
         Ok { input, val } -> template { input, val: List.append state.val val }

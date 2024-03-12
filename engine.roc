@@ -7,7 +7,7 @@ app "engine"
         pf.Task.{ Task },
         pf.Path,
         pf.File,
-        Parser.{ Ir },
+        Parser.{ Node },
         "page.htmr" as template : List U8,
     ]
     provides [main] to pf
@@ -24,15 +24,13 @@ compile = \temp ->
     Parser.parse temp
     |> generate
 
-generate : { ir : Ir, args : List Str } -> Str
-generate = \{ ir, args } ->
-    body = List.walk ir [] \state, elem ->
+generate : { nodes : List Node, args : List Str } -> Str
+generate = \{ nodes, args } ->
+    body = List.walk nodes [] \state, elem ->
         when elem is
             Text t -> List.concat state t
             Interpolation i ->
                 List.join [state, ['$', '('], i, [')']]
-
-            Conditional _ -> state
             _ -> state
 
     """
