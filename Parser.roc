@@ -68,10 +68,11 @@ conditional = \in ->
 
 # Parsing functions
 
+identifier : Parser (List U8)
 identifier = \input ->
     when input is
-        [c, ..] if 97 <= c && c <= 122 -> chompWhile input isAlphaNumeric |> Ok
-        _ -> Err {}
+        [c, ..] if 97 <= c && c <= 122 -> chompWhile input isAlphaNumeric |> Match
+        _ -> NoMatch
 
 chompWhile = \input, predicate ->
     chomp = \parser ->
@@ -116,8 +117,8 @@ getArgs = \input ->
         when in is
             [_, .. as rest] ->
                 when identifier in is
-                    Err _ -> getArgsHelp args rest
-                    Ok ident -> getArgsHelp (List.append args ident.val) ident.input
+                    NoMatch -> getArgsHelp args rest
+                    Match ident -> getArgsHelp (List.append args ident.val) ident.input
 
             _ -> args
 
