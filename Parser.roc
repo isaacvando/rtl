@@ -9,11 +9,11 @@ Node : [
     For { list : List U8, item : List U8, body : List U8 },
 ]
 
-parse : List U8 -> { nodes: List Node, args : List Str }
+parse : List U8 -> { nodes : List Node, args : List Str }
 parse = \input ->
     nodes = template { input, val: [] }
     args = parseArguments nodes
-    {nodes, args}
+    { nodes, args }
 
 Parser a : List U8 -> [Match { input : List U8, val : a }, NoMatch]
 
@@ -49,25 +49,22 @@ interpolation = \in ->
 
         _ -> NoMatch
 
+conditional : Parser Node
 conditional = \in ->
     eatLineUntil = \state ->
         when state.input is
-            ['|', '}', .. as rest] -> Ok { input: rest, val: state.val }
-            ['\n', _] -> Err {}
+            ['|', '}', .. as rest] -> Match { input: rest, val: state.val }
+            ['\n', _] -> NoMatch
             [c, .. as rest] -> eatLineUntil { input: rest, val: List.append state.val c }
-            [] -> Err {}
+            [] -> NoMatch
 
     when in is
         ['{', '|', 'i', 'f', ' ', .. as rest] ->
-            when eatLineUntil { input: rest, val: [] } is
-                Ok state ->
-                    Ok (Conditional { condition: state.val, body: [] })
+            eatLineUntil { input: rest, val: [] }
+            |> map \state ->
+                { input: rest, val: Conditional { condition: state.val, body: [] } }
 
-                Err _ -> Err {}
-
-        _ -> Err {}
-
-
+        _ -> NoMatch
 
 # Parsing functions
 
@@ -90,9 +87,8 @@ isAlphaNumeric = \c ->
     || (65 <= c && c <= 90)
     || (97 <= c && c <= 122)
 
-
 map : [Match a, NoMatch], (a -> b) -> [Match b, NoMatch]
-map = \match, mapper -> 
+map = \match, mapper ->
     when match is
         Match m -> Match (mapper m)
         NoMatch -> NoMatch
@@ -101,7 +97,6 @@ unwrap = \x ->
     when x is
         Err _ -> crash "bad unwrap"
         Ok v -> v
-
 
 # Extract arguments
 

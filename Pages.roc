@@ -2,7 +2,7 @@ interface Pages
     exposes [page]
     imports []
 
-page = \{  } ->
+page = \{} ->
     """
     <!DOCTYPE html>
     <html>
@@ -20,4 +20,3 @@ page = \{  } ->
     </body>
     </html>
     """
-    

@@ -31,6 +31,7 @@ generate = \{ nodes, args } ->
             Text t -> List.concat state t
             Interpolation i ->
                 List.join [state, ['$', '('], i, [')']]
+
             _ -> state
 
     """
