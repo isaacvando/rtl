@@ -71,16 +71,17 @@ conditional = \in ->
 identifier : Parser (List U8)
 identifier = \input ->
     when input is
-        [c, ..] if 97 <= c && c <= 122 -> chompWhile input isAlphaNumeric |> Match
+        [c, ..] if 97 <= c && c <= 122 -> (chompWhile isAlphaNumeric) input
         _ -> NoMatch
 
-chompWhile = \input, predicate ->
-    chomp = \parser ->
-        when parser.input is
-            [c, .. as rest] if predicate c -> chomp { input: rest, val: List.append parser.val c }
-            _ -> parser
+chompWhile : (U8 -> Bool) -> Parser (List U8)
+chompWhile = \predicate -> \input ->
+        chomp = \parser ->
+            when parser.input is
+                [c, .. as rest] if predicate c -> chomp { input: rest, val: List.append parser.val c }
+                _ -> parser
 
-    chomp { input, val: [] }
+        chomp { input, val: [] } |> Match
 
 isAlphaNumeric : U8 -> Bool
 isAlphaNumeric = \c ->
