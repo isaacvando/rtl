@@ -15,12 +15,12 @@ parse = \input ->
     args = parseArguments nodes
     {nodes, args}
 
-# Parser a : { input : List U8, val : a }
+Parser a : List U8 -> [Match { input : List U8, val : a }, NoMatch]
 
 template = \state ->
     when interpolation state.input is
-        Ok { input, val } -> template { input, val: List.append state.val val }
-        Err {} ->
+        Match { input, val } -> template { input, val: List.append state.val val }
+        NoMatch ->
             when state.input is
                 [] -> state.val
                 [c, ..] ->
@@ -32,21 +32,22 @@ template = \state ->
                             _ -> List.append state.val (Text [c])
                     template { input: List.dropFirst state.input 1, val }
 
+interpolation : Parser Node
 interpolation = \in ->
     eatLineUntil = \state ->
         when state.input is
-            ['}', '}', .. as rest] -> Ok { input: rest, val: state.val }
-            ['\n', _] -> Err {}
+            ['}', '}', .. as rest] -> Match { input: rest, val: state.val }
+            ['\n', _] -> NoMatch
             [c, .. as rest] -> eatLineUntil { input: rest, val: List.append state.val c }
-            [] -> Err {}
+            [] -> NoMatch
 
     when in is
         ['{', '{', .. as rest] ->
             eatLineUntil { input: rest, val: [] }
-            |> Result.map \state ->
+            |> map \state ->
                 { input: state.input, val: Interpolation state.val }
 
-        _ -> Err {}
+        _ -> NoMatch
 
 conditional = \in ->
     eatLineUntil = \state ->
@@ -88,6 +89,13 @@ isAlphaNumeric = \c ->
     (48 <= c && c <= 57)
     || (65 <= c && c <= 90)
     || (97 <= c && c <= 122)
+
+
+map : [Match a, NoMatch], (a -> b) -> [Match b, NoMatch]
+map = \match, mapper -> 
+    when match is
+        Match m -> Match (mapper m)
+        NoMatch -> NoMatch
 
 unwrap = \x ->
     when x is
