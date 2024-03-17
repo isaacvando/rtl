@@ -8,7 +8,7 @@ app "engine"
         pf.Path,
         pf.File,
         Parser.{ Node },
-        "page.htmr" as template : List U8,
+        "page.htmr" as template : Str,
     ]
     provides [main] to pf
 
@@ -19,18 +19,17 @@ main =
     |> Task.await \_ ->
         Stdout.line "Generated Pages.roc"
 
-compile : List U8 -> Str
 compile = \temp ->
     Parser.parse temp
     |> generate
 
-generate : { nodes : List Node, args : List Str } -> Str
+generate : { nodes : List (Node Str), args : List Str } -> Str
 generate = \{ nodes, args } ->
-    body = List.walk nodes [] \state, elem ->
+    body = List.walk nodes "" \state, elem ->
         when elem is
-            Text t -> List.concat state t
+            Text t -> Str.concat state t
             Interpolation i ->
-                List.join [state, ['$', '('], i, [')']]
+                Str.concat state "\$($(i))"
 
             _ -> state
 
@@ -41,7 +40,7 @@ generate = \{ nodes, args } ->
 
     page = \\{ $(args |> Str.joinWith ", ") } ->
         \"""
-    $(body |> Str.fromUtf8 |> unwrap |> indent)\"""
+    $(body |> indent)\"""
         
     """
 

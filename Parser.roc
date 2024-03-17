@@ -2,18 +2,32 @@ interface Parser
     exposes [parse, Node]
     imports []
 
-Node : [
-    Text (List U8),
-    Interpolation (List U8),
-    Conditional { condition : List U8, body : List U8 },
-    For { list : List U8, item : List U8, body : List U8 },
+Node a : [
+    Text a,
+    Interpolation a,
+    Conditional { condition : a, body : a },
+    For { list : a, item : a, body : a },
 ]
 
-parse : List U8 -> { nodes : List Node, args : List Str }
+nodeMap : Node a, (a -> b) -> Node b
+nodeMap = \node, mapper ->
+    when node is
+        Text val -> Text (mapper val)
+        Interpolation val -> Interpolation (mapper val)
+        Conditional { condition, body } -> Conditional { condition: mapper condition, body: mapper body }
+        For { list, item, body } -> For { list: mapper list, item: mapper item, body: mapper body }
+
+parse : Str -> { nodes : List (Node Str), args : List Str }
 parse = \input ->
-    nodes = template { input, val: [] }
-    args = parseArguments nodes
-    { nodes, args }
+    bytesNodes = template { input: Str.toUtf8 input, val: [] }
+    strNodes =
+        bytesNodes
+        |> List.map \node ->
+            nodeMap node \bytes ->
+                Str.fromUtf8 bytes |> unwrap
+
+    args = parseArguments bytesNodes
+    { nodes: strNodes, args }
 
 Parser a : List U8 -> [Match { input : List U8, val : a }, NoMatch]
 
@@ -32,7 +46,7 @@ template = \state ->
                             _ -> List.append state.val (Text [c])
                     template { input: List.dropFirst state.input 1, val }
 
-interpolation : Parser Node
+interpolation : Parser (Node (List U8))
 interpolation = \in ->
     eatLineUntil = \state ->
         when state.input is
@@ -49,7 +63,7 @@ interpolation = \in ->
 
         _ -> NoMatch
 
-conditional : Parser Node
+conditional : Parser (Node (List U8))
 conditional = \in ->
     eatLineUntil = \state ->
         when state.input is
@@ -102,7 +116,7 @@ unwrap = \x ->
 
 # Extract arguments
 
-parseArguments : List Node -> List Str
+parseArguments : List (Node (List U8)) -> List Str
 parseArguments = \ir ->
     List.walk ir (Set.empty {}) \args, node ->
         when node is
