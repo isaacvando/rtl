@@ -120,23 +120,23 @@ parseArguments : List (Node (List U8)) -> List Str
 parseArguments = \ir ->
     List.walk ir (Set.empty {}) \args, node ->
         when node is
-            Interpolation i -> args
-            Text _ -> args
-            Conditional _ -> args
+            Interpolation i -> getArgs i |> Set.union args
+            Conditional { condition, body } -> getArgs condition |> Set.union (getArgs body) |> Set.union args
+            For { list, item, body } -> getArgs list |> Set.union (getArgs body) |> Set.union args # TODO: remove the item from args
             _ -> args
     |> Set.toList
 
-getArgs : List U8 -> List Str
+getArgs : List U8 -> Set Str
 getArgs = \input ->
     getArgsHelp = \args, in ->
         when in is
             [_, .. as rest] ->
                 when identifier in is
                     NoMatch -> getArgsHelp args rest
-                    Match ident -> getArgsHelp (List.append args ident.val) ident.input
+                    Match ident -> getArgsHelp (Set.insert args ident.val) ident.input
 
             _ -> args
 
-    getArgsHelp [] input
-    |> List.map \elem ->
+    getArgsHelp (Set.empty {}) input
+    |> Set.map \elem ->
         Str.fromUtf8 elem |> unwrap

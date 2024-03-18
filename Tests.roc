@@ -1,7 +1,11 @@
 interface Tests
-    imports [Parser.parse]
     exposes []
+    imports [Parser.{ parse }]
 
-expect 
+expect
     result = parse "foo"
-    result.nodes = [Text ]
+    result == { nodes: [Text "foo"], args: [] }
+
+expect
+    result = parse "<p>{{name}}</p>"
+    result == { nodes: [Text "<p>", Interpolation "name", Text "</p>"], args: ["name"] }
