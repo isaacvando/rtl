@@ -19,7 +19,11 @@ nodeMap = \node, mapper ->
 
 parse : Str -> { nodes : List (Node Str), args : List Str }
 parse = \input ->
-    bytesNodes = template { input: Str.toUtf8 input, val: [] }
+    bytesNodes =
+        when Str.toUtf8 input |> template is
+            Match { input: [], val: nodes } -> nodes
+            _ -> crash "There is a bug!"
+
     strNodes =
         bytesNodes
         |> List.map \node ->
@@ -31,20 +35,43 @@ parse = \input ->
 
 Parser a : List U8 -> [Match { input : List U8, val : a }, NoMatch]
 
-template = \state ->
-    when interpolation state.input is
-        Match { input, val } -> template { input, val: List.append state.val val }
-        NoMatch ->
-            when state.input is
-                [] -> state.val
-                [c, ..] ->
-                    val =
-                        when state.val is
-                            [.. as r, Text t] ->
-                                List.append r (Text (List.append t c))
+# template = \state ->
+#     when interpolation state.input is
+#         Match { input, val } -> template { input, val: List.append state.val val }
+#         NoMatch ->
+#             when state.input is
+#                 [] -> state.val
+#                 [c, ..] ->
+#                     val =
+#                         when state.val is
+#                             [.. as r, Text t] ->
+#                                 List.append r (Text (List.append t c))
 
-                            _ -> List.append state.val (Text [c])
-                    template { input: List.dropFirst state.input 1, val }
+#                             _ -> List.append state.val (Text [c])
+#                     template { input: List.dropFirst state.input 1, val }
+
+template : Parser (List (Node (List U8)))
+template =
+    many (oneOf [interpolation])
+
+oneOf : List (Parser a) -> Parser a
+oneOf = \options ->
+    when options is
+        [] -> \_ -> NoMatch
+        [first, .. as rest] ->
+            \input ->
+                when first input is
+                    Match m -> Match m
+                    NoMatch -> (oneOf rest) input
+
+many : Parser a -> Parser (List a)
+many = \parser ->
+    help = \p, input, items ->
+        when parser input is
+            NoMatch -> Match { input: input, val: items }
+            Match m -> help p m.input (List.append items m.val)
+
+    \in -> help parser in []
 
 interpolation : Parser (Node (List U8))
 interpolation = \in ->
