@@ -26,6 +26,7 @@ parse = \input ->
 
     strNodes =
         bytesNodes
+        |> combineTextNodes
         |> List.map \node ->
             nodeMap node \bytes ->
                 Str.fromUtf8 bytes |> unwrap
@@ -33,26 +34,26 @@ parse = \input ->
     args = parseArguments bytesNodes
     { nodes: strNodes, args }
 
+combineTextNodes : List (Node (List U8)) -> List (Node (List U8))
+combineTextNodes = \nodes ->
+    List.walk nodes [] \state, elem ->
+        when (state, elem) is
+            ([.. as rest, Text t1], Text t2) ->
+                List.append rest (Text (List.concat t1 t2))
+
+            _ -> List.append state elem
+
 Parser a : List U8 -> [Match { input : List U8, val : a }, NoMatch]
-
-# template = \state ->
-#     when interpolation state.input is
-#         Match { input, val } -> template { input, val: List.append state.val val }
-#         NoMatch ->
-#             when state.input is
-#                 [] -> state.val
-#                 [c, ..] ->
-#                     val =
-#                         when state.val is
-#                             [.. as r, Text t] ->
-#                                 List.append r (Text (List.append t c))
-
-#                             _ -> List.append state.val (Text [c])
-#                     template { input: List.dropFirst state.input 1, val }
 
 template : Parser (List (Node (List U8)))
 template =
-    many (oneOf [interpolation])
+    many (oneOf [interpolation, text])
+
+text : Parser (Node (List U8))
+text = \input ->
+    when input is
+        [] -> NoMatch
+        [first, .. as rest] -> Match { input: rest, val: Text [first] }
 
 oneOf : List (Parser a) -> Parser a
 oneOf = \options ->
