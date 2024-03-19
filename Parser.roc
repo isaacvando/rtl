@@ -2,58 +2,46 @@ interface Parser
     exposes [parse, Node]
     imports []
 
-Node a : [
-    Text a,
-    Interpolation a,
-    Conditional { condition : a, body : a },
-    For { list : a, item : a, body : a },
+Node : [
+    Text Str,
+    Interpolation Str,
+    Conditional { condition : Str, body : Str },
+    For { list : Str, item : Str, body : Str },
 ]
 
-nodeMap : Node a, (a -> b) -> Node b
-nodeMap = \node, mapper ->
-    when node is
-        Text val -> Text (mapper val)
-        Interpolation val -> Interpolation (mapper val)
-        Conditional { condition, body } -> Conditional { condition: mapper condition, body: mapper body }
-        For { list, item, body } -> For { list: mapper list, item: mapper item, body: mapper body }
-
-parse : Str -> { nodes : List (Node Str), args : List Str }
+parse : Str -> { nodes : List Node, args : List Str }
 parse = \input ->
-    bytesNodes =
+    nodes =
         when Str.toUtf8 input |> template is
-            Match { input: [], val: nodes } -> nodes
+            Match { input: [], val } -> combineTextNodes val
             _ -> crash "There is a bug!"
 
-    strNodes =
-        bytesNodes
-        |> combineTextNodes
-        |> List.map \node ->
-            nodeMap node \bytes ->
-                Str.fromUtf8 bytes |> unwrap
+    args = parseArguments nodes
 
-    args = parseArguments bytesNodes
-    { nodes: strNodes, args }
+    { nodes, args }
 
-combineTextNodes : List (Node (List U8)) -> List (Node (List U8))
+combineTextNodes : List Node -> List Node
 combineTextNodes = \nodes ->
     List.walk nodes [] \state, elem ->
         when (state, elem) is
             ([.. as rest, Text t1], Text t2) ->
-                List.append rest (Text (List.concat t1 t2))
+                List.append rest (Text (Str.concat t1 t2))
 
             _ -> List.append state elem
 
 Parser a : List U8 -> [Match { input : List U8, val : a }, NoMatch]
 
-template : Parser (List (Node (List U8)))
+template : Parser (List Node)
 template =
     many (oneOf [interpolation, text])
 
-text : Parser (Node (List U8))
+text : Parser Node
 text = \input ->
     when input is
         [] -> NoMatch
-        [first, .. as rest] -> Match { input: rest, val: Text [first] }
+        [first, .. as rest] ->
+            firstStr = [first] |> Str.fromUtf8 |> unwrap
+            Match { input: rest, val: Text firstStr }
 
 oneOf : List (Parser a) -> Parser a
 oneOf = \options ->
@@ -74,7 +62,7 @@ many = \parser ->
 
     \in -> help parser in []
 
-interpolation : Parser (Node (List U8))
+interpolation : Parser Node
 interpolation = \in ->
     eatLineUntil = \state ->
         when state.input is
@@ -87,11 +75,12 @@ interpolation = \in ->
         ['{', '{', .. as rest] ->
             eatLineUntil { input: rest, val: [] }
             |> map \state ->
-                { input: state.input, val: Interpolation state.val }
+                valStr = state.val |> Str.fromUtf8 |> unwrap
+                { input: state.input, val: Interpolation valStr }
 
         _ -> NoMatch
 
-conditional : Parser (Node (List U8))
+conditional : Parser Node
 conditional = \in ->
     eatLineUntil = \state ->
         when state.input is
@@ -104,7 +93,7 @@ conditional = \in ->
         ['{', '|', 'i', 'f', ' ', .. as rest] ->
             eatLineUntil { input: rest, val: [] }
             |> map \state ->
-                { input: rest, val: Conditional { condition: state.val, body: [] } }
+                { input: rest, val: Conditional { condition: state.val |> Str.fromUtf8 |> unwrap, body: "" } }
 
         _ -> NoMatch
 
@@ -144,17 +133,17 @@ unwrap = \x ->
 
 # Extract arguments
 
-parseArguments : List (Node (List U8)) -> List Str
+parseArguments : List Node -> List Str
 parseArguments = \ir ->
     List.walk ir (Set.empty {}) \args, node ->
         when node is
             Interpolation i -> getArgs i |> Set.union args
             Conditional { condition, body } -> getArgs condition |> Set.union (getArgs body) |> Set.union args
-            For { list, item, body } -> getArgs list |> Set.union (getArgs body) |> Set.union args # TODO: remove the item from args
+            For { list, item, body } -> getArgs list |> Set.union (getArgs body) |> Set.difference (Set.fromList [item]) |> Set.union args # TODO: remove the item from args
             _ -> args
     |> Set.toList
 
-getArgs : List U8 -> Set Str
+getArgs : Str -> Set Str
 getArgs = \input ->
     getArgsHelp = \args, in ->
         when in is
@@ -165,6 +154,6 @@ getArgs = \input ->
 
             _ -> args
 
-    getArgsHelp (Set.empty {}) input
+    getArgsHelp (Set.empty {}) (Str.toUtf8 input)
     |> Set.map \elem ->
         Str.fromUtf8 elem |> unwrap
