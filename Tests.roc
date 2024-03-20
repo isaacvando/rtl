@@ -27,4 +27,4 @@ expect
     == [Conditional { condition: "x > y", body: "foo" }]
     &&
     Set.fromList result.args
-    == Set.fromList ["x", "y"]
+    == Set.fromList ["x", "y", "foo"]

@@ -33,7 +33,29 @@ Parser a : List U8 -> [Match { input : List U8, val : a }, NoMatch]
 
 node : Parser Node
 node =
-    oneOf [interpolation, text]
+    oneOf [interpolation, conditional, text]
+
+interpolation : Parser Node
+interpolation =
+    _ <- string "{{" |> andThen
+
+    manyUntil anyByte (string "}}")
+    |> map \bytes ->
+        Str.fromUtf8 bytes |> unwrap |> Interpolation
+
+conditional : Parser Node
+conditional =
+    _ <- string "{|if " |> andThen
+    condition <- manyUntil anyByte (string " |}") |> andThen
+    body <- manyUntil anyByte (string "{|endif|}") |> andThen
+
+    \input -> Match {
+            input,
+            val: Conditional {
+                condition: Str.fromUtf8 condition |> unwrap,
+                body: Str.fromUtf8 body |> unwrap,
+            },
+        }
 
 text : Parser Node
 text = \input ->
@@ -89,14 +111,6 @@ andThen = \parser, mapper ->
         when parser input is
             NoMatch -> NoMatch
             Match m -> (mapper m.val) m.input
-
-interpolation : Parser Node
-interpolation =
-    _ <- string "{{" |> andThen
-
-    manyUntil anyByte (string "}}")
-    |> map \bytes ->
-        Str.fromUtf8 bytes |> unwrap |> Interpolation
 
 anyByte : Parser U8
 anyByte = \input ->
