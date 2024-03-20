@@ -23,7 +23,7 @@ compile = \temp ->
     Parser.parse temp
     |> generate
 
-generate : { nodes : List (Node Str), args : List Str } -> Str
+generate : { nodes : List Node, args : Set Str } -> Str
 generate = \{ nodes, args } ->
     body = List.walk nodes "" \state, elem ->
         when elem is
@@ -38,7 +38,7 @@ generate = \{ nodes, args } ->
         exposes [page]
         imports []
 
-    page = \\{ $(args |> Str.joinWith ", ") } ->
+    page = \\{ $(args |> Set.toList |> Str.joinWith ", ") } ->
         \"""
     $(body |> indent)\"""
         

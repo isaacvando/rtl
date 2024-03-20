@@ -9,7 +9,7 @@ Node : [
     For { list : Str, item : Str, body : Str },
 ]
 
-parse : Str -> { nodes : List Node, args : List Str }
+parse : Str -> { nodes : List Node, args : Set Str }
 parse = \input ->
     nodes =
         when Str.toUtf8 input |> (many node) is
@@ -172,7 +172,7 @@ unwrap = \x ->
 
 # Extract arguments
 
-parseArguments : List Node -> List Str
+parseArguments : List Node -> Set Str
 parseArguments = \ir ->
     List.walk ir (Set.empty {}) \args, n ->
         when n is
@@ -180,7 +180,6 @@ parseArguments = \ir ->
             Conditional { condition, body } -> getArgs condition |> Set.union (getArgs body) |> Set.union args
             For { list, item, body } -> getArgs list |> Set.union (getArgs body) |> Set.difference (Set.fromList [item]) |> Set.union args # TODO: remove the item from args
             _ -> args
-    |> Set.toList
 
 getArgs : Str -> Set Str
 getArgs = \input ->
