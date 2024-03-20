@@ -12,7 +12,7 @@ Node : [
 parse : Str -> { nodes : List Node, args : List Str }
 parse = \input ->
     nodes =
-        when Str.toUtf8 input |> template is
+        when Str.toUtf8 input |> (many node) is
             Match { input: [], val } -> combineTextNodes val
             _ -> crash "There is a bug!"
 
@@ -31,9 +31,9 @@ combineTextNodes = \nodes ->
 
 Parser a : List U8 -> [Match { input : List U8, val : a }, NoMatch]
 
-template : Parser (List Node)
-template =
-    many (oneOf [interpolation, text])
+node : Parser Node
+node =
+    oneOf [interpolation, text]
 
 text : Parser Node
 text = \input ->
@@ -55,47 +55,71 @@ oneOf = \options ->
 
 many : Parser a -> Parser (List a)
 many = \parser ->
-    help = \p, input, items ->
+    help = \input, items ->
         when parser input is
             NoMatch -> Match { input: input, val: items }
-            Match m -> help p m.input (List.append items m.val)
+            Match m -> help m.input (List.append items m.val)
 
-    \in -> help parser in []
+    \input -> help input []
+
+string : Str -> Parser Str
+string = \str ->
+    \input ->
+        bytes = Str.toUtf8 str
+        if List.startsWith input bytes then
+            Match { input: List.dropFirst input (List.len bytes), val: str }
+        else
+            NoMatch
+
+manyUntil : Parser a, Parser * -> Parser (List a)
+manyUntil = \parser, end ->
+    help = \input, items ->
+        when end input is
+            Match state -> Match { input: state.input, val: items }
+            NoMatch ->
+                when parser input is
+                    NoMatch -> NoMatch
+                    Match m -> help m.input (List.append items m.val)
+
+    \input -> help input []
+
+andThen : Parser a, (a -> Parser b) -> Parser b
+andThen = \parser, mapper ->
+    \input ->
+        when parser input is
+            NoMatch -> NoMatch
+            Match m -> (mapper m.val) m.input
 
 interpolation : Parser Node
-interpolation = \in ->
-    eatLineUntil = \state ->
-        when state.input is
-            ['}', '}', .. as rest] -> Match { input: rest, val: state.val }
-            ['\n', _] -> NoMatch
-            [c, .. as rest] -> eatLineUntil { input: rest, val: List.append state.val c }
-            [] -> NoMatch
+interpolation =
+    _ <- string "{{" |> andThen
 
-    when in is
-        ['{', '{', .. as rest] ->
-            eatLineUntil { input: rest, val: [] }
-            |> map \state ->
-                valStr = state.val |> Str.fromUtf8 |> unwrap
-                { input: state.input, val: Interpolation valStr }
+    manyUntil anyByte (string "}}")
+    |> map \bytes ->
+        Str.fromUtf8 bytes |> unwrap |> Interpolation
 
+anyByte : Parser U8
+anyByte = \input ->
+    when input is
+        [first, .. as rest] -> Match { input: rest, val: first }
         _ -> NoMatch
 
-conditional : Parser Node
-conditional = \in ->
-    eatLineUntil = \state ->
-        when state.input is
-            ['|', '}', .. as rest] -> Match { input: rest, val: state.val }
-            ['\n', _] -> NoMatch
-            [c, .. as rest] -> eatLineUntil { input: rest, val: List.append state.val c }
-            [] -> NoMatch
+# conditional : Parser Node
+# conditional = \in ->
+#     eatLineUntil = \state ->
+#         when state.input is
+#             ['|', '}', .. as rest] -> Match { input: rest, val: state.val }
+#             ['\n', _] -> NoMatch
+#             [c, .. as rest] -> eatLineUntil { input: rest, val: List.append state.val c }
+#             [] -> NoMatch
 
-    when in is
-        ['{', '|', 'i', 'f', ' ', .. as rest] ->
-            eatLineUntil { input: rest, val: [] }
-            |> map \state ->
-                { input: rest, val: Conditional { condition: state.val |> Str.fromUtf8 |> unwrap, body: "" } }
+#     when in is
+#         ['{', '|', 'i', 'f', ' ', .. as rest] ->
+#             eatLineUntil { input: rest, val: [] }
+#             |> map \state ->
+#                 { input: rest, val: Conditional { condition: state.val |> Str.fromUtf8 |> unwrap, body: "" } }
 
-        _ -> NoMatch
+#         _ -> NoMatch
 
 # Parsing functions
 
@@ -120,11 +144,12 @@ isAlphaNumeric = \c ->
     || (65 <= c && c <= 90)
     || (97 <= c && c <= 122)
 
-map : [Match a, NoMatch], (a -> b) -> [Match b, NoMatch]
-map = \match, mapper ->
-    when match is
-        Match m -> Match (mapper m)
-        NoMatch -> NoMatch
+map : Parser a, (a -> b) -> Parser b
+map = \parser, mapper ->
+    \in ->
+        when parser in is
+            Match { input, val } -> Match { input, val: mapper val }
+            NoMatch -> NoMatch
 
 unwrap = \x ->
     when x is
@@ -135,8 +160,8 @@ unwrap = \x ->
 
 parseArguments : List Node -> List Str
 parseArguments = \ir ->
-    List.walk ir (Set.empty {}) \args, node ->
-        when node is
+    List.walk ir (Set.empty {}) \args, n ->
+        when n is
             Interpolation i -> getArgs i |> Set.union args
             Conditional { condition, body } -> getArgs condition |> Set.union (getArgs body) |> Set.union args
             For { list, item, body } -> getArgs list |> Set.union (getArgs body) |> Set.difference (Set.fromList [item]) |> Set.union args # TODO: remove the item from args
