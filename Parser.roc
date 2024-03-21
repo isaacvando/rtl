@@ -43,10 +43,17 @@ interpolation =
 
 # conditional : Parser Node
 conditional =
-    _ <- string "{|if " |> andThen
-    condition <- manyUntil anyByte (string " |}") |> andThen
-    {} <- optional (string "\n") |> andThen
-    body <- manyUntil node (optional (string "\n") |> andThen \_ -> string "{|endif|}") |> andThen
+    condition <- manyUntil anyByte (string " |}")
+        |> startWith (string "{|if ")
+        |> endWith (optional (string "\n"))
+        |> andThen
+
+    endIf =
+        string "{|endif|}"
+        |> startWith (optional (string "\n"))
+
+    body <- manyUntil node endIf
+        |> andThen
 
     \input -> Match {
             input,
@@ -63,6 +70,15 @@ text = \input ->
         [first, .. as rest] ->
             firstStr = [first] |> Str.fromUtf8 |> unwrap
             Match { input: rest, val: Text firstStr }
+
+# startWith : Parser a, Parser * -> Parser a
+startWith = \parser, start ->
+    andThen start \_ ->
+        parser
+
+endWith = \parser, end ->
+    andThen parser \m ->
+        end |> map \_ -> m
 
 # oneOf : List (Parser a) -> Parser a
 oneOf = \options ->
