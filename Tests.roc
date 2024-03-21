@@ -21,3 +21,33 @@ expect
 expect
     result = parse "{|if x > y |}foo{|endif|}"
     result == [Conditional { condition: "x > y", body: [Text "foo"] }]
+
+expect
+    result = parse
+        """
+        {|if x > y |}
+        foo
+        {|endif|}
+        """
+    result == [Conditional { condition: "x > y", body: [Text "\nfoo\n"] }]
+
+expect
+    result = parse
+        """
+        {|if model.someField |}
+        {|if Bool.false |}
+        bar
+        {|endif|}
+        {|endif|}
+        """
+    result
+    == [
+        Conditional {
+            condition: "model.someField",
+            body: [
+                Text "\n",
+                Conditional { condition: "Bool.false", body: [Text "\nbar\n"] },
+                Text "\n",
+            ],
+        },
+    ]

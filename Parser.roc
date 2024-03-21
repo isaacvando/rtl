@@ -55,10 +55,6 @@ conditional =
             },
         }
 
-expect
-    result = conditional ("{|if Bool.true |}foo{|endif|}" |> Str.toUtf8)
-    result == Match { input: [], val: Conditional { condition: "x > y", body: [Text "foo"] } }
-
 # text : Parser Node
 text = \input ->
     when input is
