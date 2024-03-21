@@ -25,6 +25,7 @@ page = \model ->
             </div>
         </body>
         </html>
+
         """,
     ]
     |> Str.joinWith ""

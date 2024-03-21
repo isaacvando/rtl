@@ -29,7 +29,7 @@ expect
         foo
         {|endif|}
         """
-    result == [Conditional { condition: "x > y", body: [Text "\nfoo\n"] }]
+    result == [Conditional { condition: "x > y", body: [Text "foo"] }]
 
 expect
     result = parse
@@ -45,9 +45,7 @@ expect
         Conditional {
             condition: "model.someField",
             body: [
-                Text "\n",
-                Conditional { condition: "Bool.false", body: [Text "\nbar\n"] },
-                Text "\n",
+                Conditional { condition: "Bool.false", body: [Text "bar"] },
             ],
         },
     ]

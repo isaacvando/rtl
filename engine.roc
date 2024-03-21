@@ -25,24 +25,41 @@ compile = \temp ->
 
 # generate : List Node -> Str
 generate = \nodes ->
-    body = List.walk nodes "" \state, elem ->
-        when elem is
-            Text t -> Str.concat state t
-            Interpolation i ->
-                Str.concat state "\$($(i))"
-
-            _ -> state
-
     """
     interface Pages
         exposes [page]
         imports []
 
     page = \\model ->
-        \"""
-    $(body |> indent)\"""
+        [
+    $(render nodes |> indent)
+        ] |> Str.joinWith ""
         
     """
+
+render = \nodes ->
+    List.map nodes nodeToStr
+    |> Str.joinWith ",\n\n\n"
+
+nodeToStr = \node ->
+    when node is
+        Text t ->
+            """
+            \"""
+            $(t)
+            \"""
+            """
+
+        Interpolation i -> "\"\$($(i))\""
+        Conditional { condition, body } ->
+            """
+                if $(condition) then
+                    $(render body)
+                else 
+                    ""
+            """
+
+        _ -> crash "not implemented"
 
 indent = \in ->
     Str.split in "\n"

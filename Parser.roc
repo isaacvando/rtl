@@ -45,7 +45,8 @@ interpolation =
 conditional =
     _ <- string "{|if " |> andThen
     condition <- manyUntil anyByte (string " |}") |> andThen
-    body <- manyUntil node (string "{|endif|}") |> andThen
+    {} <- optional (string "\n") |> andThen
+    body <- manyUntil node (optional (string "\n") |> andThen \_ -> string "{|endif|}") |> andThen
 
     \input -> Match {
             input,
@@ -90,6 +91,12 @@ string = \str ->
             Match { input: List.dropFirst input (List.len bytes), val: str }
         else
             NoMatch
+
+optional = \parser ->
+    \input ->
+        when parser input is
+            NoMatch -> Match { input, val: {} }
+            Match m -> Match { input: m.input, val: {} }
 
 # manyUntil : Parser a, Parser * -> Parser (List a)
 manyUntil = \parser, end ->
