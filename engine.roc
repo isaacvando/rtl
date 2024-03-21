@@ -7,7 +7,7 @@ app "engine"
         pf.Task.{ Task },
         pf.Path,
         pf.File,
-        Parser.{ Node },
+        Parser,
         "page.htmr" as template : Str,
     ]
     provides [main] to pf
@@ -23,7 +23,7 @@ compile = \temp ->
     Parser.parse temp
     |> generate
 
-generate : List Node -> Str
+# generate : List Node -> Str
 generate = \nodes ->
     body = List.walk nodes "" \state, elem ->
         when elem is
