@@ -7,7 +7,7 @@ app "engine"
         pf.Task.{ Task },
         pf.Path,
         pf.File,
-        Parser,
+        Parser.{ Node },
         "page.htmr" as template : Str,
     ]
     provides [main] to pf
@@ -23,7 +23,7 @@ compile = \temp ->
     Parser.parse temp
     |> generate
 
-# generate : List Node -> Str
+generate : List Node -> Str
 generate = \nodes ->
     """
     interface Pages
@@ -37,11 +37,13 @@ generate = \nodes ->
         
     """
 
+render : List Node -> Str
 render = \nodes ->
     condense nodes
     |> List.map nodeToStr
     |> Str.joinWith ",\n\n\n"
 
+# nodeToStr : Node -> Str
 nodeToStr = \node ->
     when node is
         Text t ->
@@ -61,18 +63,20 @@ nodeToStr = \node ->
 
         _ -> crash "not implemented"
 
+# condense : List Node -> List Node
 condense = \nodes ->
-    List.map nodes \node ->
-        when node is
-            Interpolation i -> Text "\$($(i))"
-            _ -> node
-    |> List.walk [] \state, elem ->
-        when (state, elem) is
-            ([_, Text x], Text y) ->
-                combined = Str.concat x y |> Text
-                List.dropFirst state 1 |> List.append combined
+    nodes
+# List.map nodes \node ->
+#     when node is
+#         Interpolation i -> Text "\$($(i))"
+#         _ -> node
+# |> List.walk [] \state, elem ->
+#     when (state, elem) is
+#         ([_, Text x], Text y) ->
+#             combined = Str.concat x y |> Text
+#             List.dropFirst state 1 |> List.append combined
 
-            _ -> List.append state elem
+#         _ -> List.append state elem
 
 indent = \in ->
     Str.split in "\n"

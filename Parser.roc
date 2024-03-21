@@ -1,21 +1,21 @@
 interface Parser
-    exposes [parse]
+    exposes [parse, Node]
     imports []
 
-# Node : [
-#     Text Str,
-#     Interpolation Str,
-#     Conditional { condition : Str, body : List Node },
-#     For { list : Str, item : Str, body : Str },
-# ]
+Node : [
+    Text Str,
+    Interpolation Str,
+    Conditional { condition : Str, body : List Node },
+    For { list : Str, item : Str, body : Str },
+]
 
-# parse : Str -> List Node
+parse : Str -> List Node
 parse = \input ->
     when Str.toUtf8 input |> (many node) is
         Match { input: [], val } -> combineTextNodes val
         _ -> crash "There is a bug!"
 
-# combineTextNodes : List Node -> List Node
+combineTextNodes : List Node -> List Node
 combineTextNodes = \nodes ->
     List.walk nodes [] \state, elem ->
         when (state, elem) is
@@ -27,13 +27,13 @@ combineTextNodes = \nodes ->
 
             _ -> List.append state elem
 
-# Parser a : List U8 -> [Match { input : List U8, val : a }, NoMatch]
+Parser a : List U8 -> [Match { input : List U8, val : a }, NoMatch]
 
 # node : Parser Node
 node =
     oneOf [interpolation, conditional, text]
 
-# interpolation : Parser Node
+interpolation : Parser Node
 interpolation =
     _ <- string "{{" |> andThen
 
@@ -63,7 +63,7 @@ conditional =
             },
         }
 
-# text : Parser Node
+text : Parser Node
 text = \input ->
     when input is
         [] -> NoMatch
@@ -71,7 +71,7 @@ text = \input ->
             firstStr = [first] |> Str.fromUtf8 |> unwrap
             Match { input: rest, val: Text firstStr }
 
-# startWith : Parser a, Parser * -> Parser a
+startWith : Parser a, Parser * -> Parser a
 startWith = \parser, start ->
     andThen start \_ ->
         parser
@@ -80,7 +80,7 @@ endWith = \parser, end ->
     andThen parser \m ->
         end |> map \_ -> m
 
-# oneOf : List (Parser a) -> Parser a
+oneOf : List (Parser a) -> Parser a
 oneOf = \options ->
     when options is
         [] -> \_ -> NoMatch
@@ -90,7 +90,7 @@ oneOf = \options ->
                     Match m -> Match m
                     NoMatch -> (oneOf rest) input
 
-# many : Parser a -> Parser (List a)
+many : Parser a -> Parser (List a)
 many = \parser ->
     help = \input, items ->
         when parser input is
@@ -99,7 +99,7 @@ many = \parser ->
 
     \input -> help input []
 
-# string : Str -> Parser Str
+string : Str -> Parser Str
 string = \str ->
     \input ->
         bytes = Str.toUtf8 str
@@ -114,7 +114,7 @@ optional = \parser ->
             NoMatch -> Match { input, val: {} }
             Match m -> Match { input: m.input, val: {} }
 
-# manyUntil : Parser a, Parser * -> Parser (List a)
+manyUntil : Parser a, Parser * -> Parser (List a)
 manyUntil = \parser, end ->
     help = \input, items ->
         when end input is
@@ -126,20 +126,20 @@ manyUntil = \parser, end ->
 
     \input -> help input []
 
-# andThen : Parser a, (a -> Parser b) -> Parser b
+andThen : Parser a, (a -> Parser b) -> Parser b
 andThen = \parser, mapper ->
     \input ->
         when parser input is
             NoMatch -> NoMatch
             Match m -> (mapper m.val) m.input
 
-# anyByte : Parser U8
+anyByte : Parser U8
 anyByte = \input ->
     when input is
         [first, .. as rest] -> Match { input: rest, val: first }
         _ -> NoMatch
 
-# map : Parser a, (a -> b) -> Parser b
+map : Parser a, (a -> b) -> Parser b
 map = \parser, mapper ->
     \in ->
         when parser in is
