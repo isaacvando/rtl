@@ -2,7 +2,7 @@ interface Pages
     exposes [page]
     imports []
 
-page = \{ h1, ello, first, last, true } ->
+page = \model ->
     """
     <!DOCTYPE html>
     <html>

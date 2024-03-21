@@ -23,8 +23,8 @@ compile = \temp ->
     Parser.parse temp
     |> generate
 
-generate : { nodes : List Node, args : Set Str } -> Str
-generate = \{ nodes, args } ->
+generate : List Node -> Str
+generate = \nodes ->
     body = List.walk nodes "" \state, elem ->
         when elem is
             Text t -> Str.concat state t
@@ -38,7 +38,7 @@ generate = \{ nodes, args } ->
         exposes [page]
         imports []
 
-    page = \\{ $(args |> Set.toList |> Str.joinWith ", ") } ->
+    page = \\model ->
         \"""
     $(body |> indent)\"""
         

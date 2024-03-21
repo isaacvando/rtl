@@ -7,8 +7,8 @@
 </head>
 <body>
     <div>
-        {|if true |}
-        <h1>Hello, {{first}} {{last}}!</h1>
+        {|if Bool.true |}
+        <h1>Hello, {{model.first}} {{model.last}}!</h1>
         {|endif|}
     </div>
 </body>

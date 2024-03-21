@@ -5,20 +5,15 @@ interface Parser
 Node : [
     Text Str,
     Interpolation Str,
-    Conditional { condition : Str, body : Str },
+    Conditional { condition : Str, body : List Node },
     For { list : Str, item : Str, body : Str },
 ]
 
-parse : Str -> { nodes : List Node, args : Set Str }
+parse : Str -> List Node
 parse = \input ->
-    nodes =
-        when Str.toUtf8 input |> (many node) is
-            Match { input: [], val } -> combineTextNodes val
-            _ -> crash "There is a bug!"
-
-    args = parseArguments nodes
-
-    { nodes, args }
+    when Str.toUtf8 input |> (many node) is
+        Match { input: [], val } -> combineTextNodes val
+        _ -> crash "There is a bug!"
 
 combineTextNodes : List Node -> List Node
 combineTextNodes = \nodes ->
@@ -26,6 +21,9 @@ combineTextNodes = \nodes ->
         when (state, elem) is
             ([.. as rest, Text t1], Text t2) ->
                 List.append rest (Text (Str.concat t1 t2))
+
+            (_, Conditional { condition, body }) ->
+                List.append state (Conditional { condition, body: combineTextNodes body })
 
             _ -> List.append state elem
 
@@ -47,13 +45,13 @@ conditional : Parser Node
 conditional =
     _ <- string "{|if " |> andThen
     condition <- manyUntil anyByte (string " |}") |> andThen
-    body <- manyUntil anyByte (string "{|endif|}") |> andThen
+    body <- manyUntil node (string "{|endif|}") |> andThen
 
     \input -> Match {
             input,
             val: Conditional {
                 condition: Str.fromUtf8 condition |> unwrap,
-                body: Str.fromUtf8 body |> unwrap,
+                body: body,
             },
         }
 
@@ -118,46 +116,6 @@ anyByte = \input ->
         [first, .. as rest] -> Match { input: rest, val: first }
         _ -> NoMatch
 
-# conditional : Parser Node
-# conditional = \in ->
-#     eatLineUntil = \state ->
-#         when state.input is
-#             ['|', '}', .. as rest] -> Match { input: rest, val: state.val }
-#             ['\n', _] -> NoMatch
-#             [c, .. as rest] -> eatLineUntil { input: rest, val: List.append state.val c }
-#             [] -> NoMatch
-
-#     when in is
-#         ['{', '|', 'i', 'f', ' ', .. as rest] ->
-#             eatLineUntil { input: rest, val: [] }
-#             |> map \state ->
-#                 { input: rest, val: Conditional { condition: state.val |> Str.fromUtf8 |> unwrap, body: "" } }
-
-#         _ -> NoMatch
-
-# Parsing functions
-
-identifier : Parser (List U8)
-identifier = \input ->
-    when input is
-        [c, ..] if 97 <= c && c <= 122 -> (chompWhile isAlphaNumeric) input
-        _ -> NoMatch
-
-chompWhile : (U8 -> Bool) -> Parser (List U8)
-chompWhile = \predicate -> \input ->
-        chomp = \parser ->
-            when parser.input is
-                [c, .. as rest] if predicate c -> chomp { input: rest, val: List.append parser.val c }
-                _ -> parser
-
-        chomp { input, val: [] } |> Match
-
-isAlphaNumeric : U8 -> Bool
-isAlphaNumeric = \c ->
-    (48 <= c && c <= 57)
-    || (65 <= c && c <= 90)
-    || (97 <= c && c <= 122)
-
 map : Parser a, (a -> b) -> Parser b
 map = \parser, mapper ->
     \in ->
@@ -169,29 +127,3 @@ unwrap = \x ->
     when x is
         Err _ -> crash "bad unwrap"
         Ok v -> v
-
-# Extract arguments
-
-parseArguments : List Node -> Set Str
-parseArguments = \ir ->
-    List.walk ir (Set.empty {}) \args, n ->
-        when n is
-            Interpolation i -> getArgs i |> Set.union args
-            Conditional { condition, body } -> getArgs condition |> Set.union (getArgs body) |> Set.union args
-            For { list, item, body } -> getArgs list |> Set.union (getArgs body) |> Set.difference (Set.fromList [item]) |> Set.union args # TODO: remove the item from args
-            _ -> args
-
-getArgs : Str -> Set Str
-getArgs = \input ->
-    getArgsHelp = \args, in ->
-        when in is
-            [_, .. as rest] ->
-                when identifier in is
-                    NoMatch -> getArgsHelp args rest
-                    Match ident -> getArgsHelp (Set.insert args ident.val) ident.input
-
-            _ -> args
-
-    getArgsHelp (Set.empty {}) (Str.toUtf8 input)
-    |> Set.map \elem ->
-        Str.fromUtf8 elem |> unwrap
