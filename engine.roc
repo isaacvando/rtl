@@ -38,7 +38,8 @@ generate = \nodes ->
     """
 
 render = \nodes ->
-    List.map nodes nodeToStr
+    condense nodes
+    |> List.map nodeToStr
     |> Str.joinWith ",\n\n\n"
 
 nodeToStr = \node ->
@@ -50,16 +51,28 @@ nodeToStr = \node ->
             \"""
             """
 
-        Interpolation i -> "\"\$($(i))\""
         Conditional { condition, body } ->
             """
                 if $(condition) then
-                    $(render body)
+                    $(render body |> indent)
                 else 
                     ""
             """
 
         _ -> crash "not implemented"
+
+condense = \nodes ->
+    List.map nodes \node ->
+        when node is
+            Interpolation i -> Text "\$($(i))"
+            _ -> node
+    |> List.walk [] \state, elem ->
+        when (state, elem) is
+            ([_, Text x], Text y) ->
+                combined = Str.concat x y |> Text
+                List.dropFirst state 1 |> List.append combined
+
+            _ -> List.append state elem
 
 indent = \in ->
     Str.split in "\n"
