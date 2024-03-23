@@ -13,6 +13,10 @@
         <p>
             a paragraph here
         </p>
+            {|if Bool.true |}
+            nesting!
+            {|endif|}
+            {|if model.username == "isaacvando" |}inline!{|endif|}
         {|endif|}
         <p>paragraph after the endif</p>
     </div>

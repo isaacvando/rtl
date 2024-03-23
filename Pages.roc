@@ -18,13 +18,29 @@ page = \model ->
                 
         """,
         if Bool.true then
-            """
-            <h1>Hello, $(model.username)</h1>
-                    <p>
-                        a paragraph here
-                    </p>
-                    
-            """
+            [
+                """
+                <h1>Hello, $(model.username)</h1>
+                        <p>
+                            a paragraph here
+                        </p>
+                            
+                """,
+                if Bool.true then
+                    """
+                    nesting!
+                                
+                    """
+                else
+                    "",
+                if model.username == "isaacvando" then
+                    """
+                    inline!
+                    """
+                else
+                    ""
+            ]
+            |> Str.joinWith ""
         else
             "",
         """

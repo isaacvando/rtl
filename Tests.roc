@@ -75,3 +75,16 @@ expect
         Conditional { condition: "foo", body: [Text "bar\n    "] },
         Text "</p>",
     ]
+
+expect
+    result = parse
+        """
+        <div>{|if model.username == "isaac" |}Hello{|endif|}</div>
+        """
+    result
+    ==
+    [
+        Text "<div>",
+        Conditional { condition: "model.username == \"isaac\"", body: [Text "Hello"] },
+        Text "</div>",
+    ]
