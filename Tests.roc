@@ -88,3 +88,25 @@ expect
         Conditional { condition: "model.username == \"isaac\"", body: [Text "Hello"] },
         Text "</div>",
     ]
+
+expect
+    result = parse
+        """
+        {|list user : users |}
+        <p>Hello {{user}}!</p>
+        {|endlist|}
+        """
+
+    result
+    ==
+    [
+        Sequence {
+            item: "user",
+            list: "users",
+            body: [
+                Text "<p>Hello ",
+                Interpolation "user",
+                Text "!</p>",
+            ],
+        },
+    ]

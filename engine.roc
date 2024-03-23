@@ -71,10 +71,16 @@ nodeToStr = \node ->
                     ""
                 """
 
+            Sequence { item, list, body } -> ""
+            # """
+            # List.map $(list) \\$(item) ->
+            #     $(render body)
+            # |> Str.joinWith ""
+            # """
             _ -> "not implemented"
     indent block
 
-condense : List Node -> List Node
+# condense : List Node -> List Node
 condense = \nodes ->
     List.map nodes \node ->
         when node is
@@ -94,7 +100,3 @@ indent = \in ->
         Str.concat "    " str
     |> Str.joinWith "\n"
 
-unwrap = \x ->
-    when x is
-        Err _ -> crash "bad unwrap"
-        Ok v -> v

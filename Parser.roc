@@ -6,7 +6,7 @@ Node : [
     Text Str,
     Interpolation Str,
     Conditional { condition : Str, body : List Node },
-    For { list : Str, item : Str, body : Str },
+    Sequence { item : Str, list : Str, body : List Node },
 ]
 
 parse : Str -> List Node
@@ -25,13 +25,16 @@ combineTextNodes = \nodes ->
             (_, Conditional { condition, body }) ->
                 List.append state (Conditional { condition, body: combineTextNodes body })
 
+            (_, Sequence { item, list, body }) ->
+                List.append state (Sequence { item, list, body: combineTextNodes body })
+
             _ -> List.append state elem
 
 Parser a : List U8 -> [Match { input : List U8, val : a }, NoMatch]
 
 # node : Parser Node
 node =
-    oneOf [interpolation, conditional, text]
+    oneOf [interpolation, conditional, sequence, text]
 
 interpolation : Parser Node
 interpolation =
@@ -45,15 +48,13 @@ interpolation =
 conditional =
     condition <- manyUntil anyByte (string " |}")
         |> startWith (string "{|if ")
-        |> endWith (optional (string "\n"))
-        |> endWith (many hSpace)
+        |> leftoverTagSpace
         |> andThen
 
     endIf =
         string "{|endif|}"
         |> startWith (optional (string "\n"))
-        |> endWith (optional (string "\n"))
-        |> endWith (many hSpace)
+        |> leftoverTagSpace
 
     body <- manyUntil node endIf
         |> andThen
@@ -66,9 +67,39 @@ conditional =
             },
         }
 
-hSpace : Parser Str
-hSpace =
-    oneOf [string " ", string "\t"]
+sequence : Parser Node
+sequence =
+    item <- manyUntil anyByte (string " : ")
+        |> startWith (string "{|list ")
+        |> andThen
+
+    list <-
+        manyUntil anyByte (string " |}")
+        |> leftoverTagSpace
+        |> andThen
+
+    endList =
+        string "{|endlist|}"
+        |> startWith (optional (string "\n"))
+        |> leftoverTagSpace
+
+    body <- manyUntil node endList
+        |> andThen
+
+    \input -> Match {
+            input,
+            val: Sequence {
+                item: Str.fromUtf8 item |> unwrap,
+                list: Str.fromUtf8 list |> unwrap,
+                body: body,
+            },
+        }
+
+leftoverTagSpace : Parser a -> Parser a
+leftoverTagSpace = \parser ->
+    parser
+    |> endWith (optional (string "\n"))
+    |> endWith (many hSpace)
 
 text : Parser Node
 text = \input ->
@@ -77,6 +108,10 @@ text = \input ->
         [first, .. as rest] ->
             firstStr = [first] |> Str.fromUtf8 |> unwrap
             Match { input: rest, val: Text firstStr }
+
+hSpace : Parser Str
+hSpace =
+    oneOf [string " ", string "\t"]
 
 startWith : Parser a, Parser * -> Parser a
 startWith = \parser, start ->
