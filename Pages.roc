@@ -14,16 +14,14 @@ page = \model ->
     </head>
     <body>
         <div>
+            $(model.name)
             
     """,
     
     
         if Bool.true then
-                """
-                <h1>Hello, world</h1>
-                
-        """
-        else 
+            ""
+        else
             "",
     
     
