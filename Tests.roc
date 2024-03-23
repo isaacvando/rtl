@@ -49,3 +49,29 @@ expect
             ],
         },
     ]
+
+expect
+    result = parse
+        """
+        foo
+        bar
+        {{model.baz}}
+        foo
+        """
+    result == [Text "foo\nbar\n", Interpolation "model.baz", Text "\nfoo"]
+
+expect
+    result = parse
+        """
+        <p>
+            {|if foo |}
+            bar
+            {|endif|}
+        </p>
+        """
+    result
+    == [
+        Text "<p>\n    ",
+        Conditional { condition: "foo", body: [Text "bar\n    "] },
+        Text "</p>",
+    ]

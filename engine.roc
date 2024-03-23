@@ -25,43 +25,54 @@ compile = \temp ->
 
 generate : List Node -> Str
 generate = \nodes ->
+    dbg nodes
+
     """
     interface Pages
         exposes [page]
         imports []
 
     page = \\model ->
-        [
-    $(render nodes |> indent)
-        ] |> Str.joinWith ""
-        
+    $(render nodes)
     """
 
 render : List Node -> Str
 render = \nodes ->
-    condense nodes
-    |> List.map nodeToStr
-    |> Str.joinWith ",\n\n\n"
+    blocks = condense nodes |> List.map nodeToStr
+
+    when blocks is
+        [elem] -> elem
+        _ ->
+            list = blocks |> Str.joinWith ",\n"
+            """
+            [
+            $(list)
+            ]
+            |> Str.joinWith ""
+            """
+            |> indent
 
 # nodeToStr : Node -> Str
 nodeToStr = \node ->
-    when node is
-        Text t ->
-            """
-            \"""
-            $(t)
-            \"""
-            """
+    block =
+        when node is
+            Text t ->
+                """
+                \"""
+                $(t)
+                \"""
+                """
 
-        Conditional { condition, body } ->
-            """
+            Conditional { condition, body } ->
+                """
                 if $(condition) then
-                    $(render body)
+                $(render body)
                 else
                     ""
-            """
+                """
 
-        _ -> "not implemented"
+            _ -> "not implemented"
+    indent block
 
 condense : List Node -> List Node
 condense = \nodes ->

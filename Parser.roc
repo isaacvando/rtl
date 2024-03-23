@@ -46,11 +46,14 @@ conditional =
     condition <- manyUntil anyByte (string " |}")
         |> startWith (string "{|if ")
         |> endWith (optional (string "\n"))
+        |> endWith (many hSpace)
         |> andThen
 
     endIf =
         string "{|endif|}"
         |> startWith (optional (string "\n"))
+        |> endWith (optional (string "\n"))
+        |> endWith (many hSpace)
 
     body <- manyUntil node endIf
         |> andThen
@@ -62,6 +65,10 @@ conditional =
                 body: body,
             },
         }
+
+hSpace : Parser Str
+hSpace =
+    oneOf [string " ", string "\t"]
 
 text : Parser Node
 text = \input ->
