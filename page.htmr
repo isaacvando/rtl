@@ -9,7 +9,7 @@
     <div>
         {{model.name}}
         {|if Bool.true |}
-        <h1>Hello, world</h1>
+        <h1>Hello, {{model.username}}</h1>
         {|endif|}
     </div>
 </body>

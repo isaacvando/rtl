@@ -20,7 +20,10 @@ page = \model ->
     
     
         if Bool.true then
-            ""
+            """
+            <h1>Hello, $(model.username)</h1>
+            
+    """
         else
             "",
     

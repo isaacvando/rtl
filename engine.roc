@@ -43,7 +43,7 @@ render = \nodes ->
     |> List.map nodeToStr
     |> Str.joinWith ",\n\n\n"
 
-nodeToStr : Node -> Str
+# nodeToStr : Node -> Str
 nodeToStr = \node ->
     when node is
         Text t ->
@@ -56,7 +56,7 @@ nodeToStr = \node ->
         Conditional { condition, body } ->
             """
                 if $(condition) then
-                    ""
+                    $(render body)
                 else
                     ""
             """
