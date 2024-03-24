@@ -17,7 +17,7 @@ main = \req ->
                 Pages.page {
                     name: "Isaac",
                     username: "isaacvando",
-                    names: ["Ashley", "Tony", "another one!!"],
+                    names: ["Ashley", "Tony", "another one!!", "fooname"],
                 }
                 |> Str.toUtf8
             Task.ok { status: 200, headers: [Http.header "Content-Type" "text/html"], body }

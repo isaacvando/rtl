@@ -21,6 +21,9 @@
         <p>paragraph after the endif</p>
         {|list name : model.names |}
         <em>Hello, {{name}}!</em>
+        {|if Str.startsWith name "foo" |}
+        {{name}} starts with foo!
+        {|endif|}
         {|endlist|}
     </div>
 </body>
