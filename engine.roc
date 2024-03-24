@@ -39,13 +39,6 @@ generate = \nodes ->
     $(body)
     """
 
-RenderNode : [
-    T Str,
-    C { condition : Str, body : List RenderNode },
-    S { item : Str, list : Str, body : List RenderNode },
-]
-
-render : List RenderNode -> Str
 render = \nodes ->
     when List.map nodes nodeToStr is
         [elem] -> elem
@@ -59,18 +52,17 @@ render = \nodes ->
             """
             |> indent
 
-# nodeToStr : RenderNode -> Str
 nodeToStr = \node ->
     block =
         when node is
-            T t ->
+            Text t ->
                 """
                 \"""
                 $(t)
                 \"""
                 """
 
-            C { condition, body } ->
+            Conditional { condition, body } ->
                 """
                 if $(condition) then
                 $(render body)
@@ -78,7 +70,7 @@ nodeToStr = \node ->
                     ""
                 """
 
-            S { item, list, body } ->
+            Sequence { item, list, body } ->
                 """
                 List.map $(list) \\$(item) ->
                 $(render body)
@@ -86,18 +78,17 @@ nodeToStr = \node ->
                 """
     indent block
 
-convertInterpolationsToText : List Node -> List RenderNode
 convertInterpolationsToText = \nodes ->
     List.map nodes \node ->
         when node is
-            Interpolation i -> T "\$($(i))"
-            Text t -> T t
-            Sequence { item, list, body } -> S { item, list, body: convertInterpolationsToText body }
-            Conditional { condition, body } -> C { condition, body: convertInterpolationsToText body }
+            Interpolation i -> Text "\$($(i))"
+            Text t -> Text t
+            Sequence { item, list, body } -> Sequence { item, list, body: convertInterpolationsToText body }
+            Conditional { condition, body } -> Conditional { condition, body: convertInterpolationsToText body }
     |> List.walk [] \state, elem ->
         when (state, elem) is
-            ([.., T x], T y) ->
-                combined = Str.concat x y |> T
+            ([.., Text x], Text y) ->
+                combined = Str.concat x y |> Text
                 List.dropFirst state 1 |> List.append combined
 
             _ -> List.append state elem
