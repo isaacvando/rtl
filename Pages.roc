@@ -62,7 +62,7 @@ page = \model ->
                         """,
                         List.map [1,2,3,4] \x ->
                             """
-                            <li>$(x)</li>
+                            <li>$(Num.toStr x)</li>
                                     
                             """
                         |> Str.joinWith "",

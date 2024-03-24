@@ -25,7 +25,7 @@
         {{name}} starts with foo!
         <ul>
         {|list x : [1,2,3,4] |}
-            <li>{{x}}</li>
+            <li>{{Num.toStr x}}</li>
         {|endlist|}
         </ul>
         {|endif|}

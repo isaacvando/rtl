@@ -42,7 +42,7 @@ interpolation =
 
     manyUntil anyByte (string "}}")
     |> map \bytes ->
-        Str.fromUtf8 bytes |> unwrap |> Interpolation
+        unsafeFromUtf8 bytes |> Interpolation
 
 # conditional : Parser Node
 conditional =
@@ -59,13 +59,12 @@ conditional =
     body <- manyUntil node endIf
         |> andThen
 
-    \input -> Match {
-            input,
-            val: Conditional {
-                condition: Str.fromUtf8 condition |> unwrap,
-                body: body,
-            },
-        }
+    val = Conditional {
+        condition: unsafeFromUtf8 condition,
+        body: body,
+    }
+
+    \input -> Match { input, val }
 
 sequence : Parser Node
 sequence =
@@ -86,14 +85,13 @@ sequence =
     body <- manyUntil node endList
         |> andThen
 
-    \input -> Match {
-            input,
-            val: Sequence {
-                item: Str.fromUtf8 item |> unwrap,
-                list: Str.fromUtf8 list |> unwrap,
-                body: body,
-            },
-        }
+    val = Sequence {
+        item: unsafeFromUtf8 item,
+        list: unsafeFromUtf8 list,
+        body: body,
+    }
+
+    \input -> Match { input, val }
 
 leftoverTagSpace : Parser a -> Parser a
 leftoverTagSpace = \parser ->
@@ -102,12 +100,11 @@ leftoverTagSpace = \parser ->
     |> endWith (many hSpace)
 
 text : Parser Node
-text = \input ->
-    when input is
-        [] -> NoMatch
-        [first, .. as rest] ->
-            firstStr = [first] |> Str.fromUtf8 |> unwrap
-            Match { input: rest, val: Text firstStr }
+text =
+    anyByte
+    |> map \byte ->
+        unsafeFromUtf8 [byte]
+        |> Text
 
 hSpace : Parser Str
 hSpace =
@@ -188,7 +185,8 @@ map = \parser, mapper ->
             Match { input, val } -> Match { input, val: mapper val }
             NoMatch -> NoMatch
 
-unwrap = \x ->
-    when x is
-        Err _ -> crash "bad unwrap"
-        Ok v -> v
+unsafeFromUtf8 = \bytes ->
+    when Str.fromUtf8 bytes is
+        Ok s -> s
+        Err _ ->
+            crash "I was unable to convert these bytes into a string: $(Inspect.toStr bytes)"
