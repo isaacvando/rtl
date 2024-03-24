@@ -23,6 +23,11 @@
         <em>Hello, {{name}}!</em>
         {|if Str.startsWith name "foo" |}
         {{name}} starts with foo!
+        <ul>
+        {|list x : [1,2,3,4] |}
+            <li>{{x}}</li>
+        {|endlist|}
+        </ul>
         {|endif|}
         {|endlist|}
     </div>

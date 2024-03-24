@@ -54,10 +54,24 @@ page = \model ->
                         
                 """,
                 if Str.startsWith name "foo" then
-                    """
-                    $(name) starts with foo!
-                            
-                    """
+                    [
+                        """
+                        $(name) starts with foo!
+                                <ul>
+                                
+                        """,
+                        List.map [1,2,3,4] \x ->
+                            """
+                            <li>$(x)</li>
+                                    
+                            """
+                        |> Str.joinWith "",
+                        """
+                        </ul>
+                                
+                        """
+                    ]
+                    |> Str.joinWith ""
                 else
                     ""
             ]
