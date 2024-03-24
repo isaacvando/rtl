@@ -13,22 +13,18 @@ app "engine"
     provides [main] to pf
 
 main =
-    File.writeUtf8 (Path.fromStr "Pages.roc") (compile template)
-    |> Task.onErr \e ->
-        Stdout.line "Error writing file: $(Inspect.toStr e)"
-    |> Task.await \_ ->
-        Stdout.line "Generated Pages.roc"
+    {} <- File.writeUtf8 (Path.fromStr "Pages.roc") (compile template)
+        |> Task.onErr \e ->
+            Stdout.line "Error writing file: $(Inspect.toStr e)"
+        |> Task.await
+
+    Stdout.line "Generated Pages.roc"
 
 compile = \temp ->
     Parser.parse temp
     |> generate
 
-Node2 : [
-    T Str,
-    C { condition : Str, body : List Node2 },
-    S { item : Str, list : Str, body : List Node2 },
-]
-# generate : List Node -> Str
+generate : List Node -> Str
 generate = \nodes ->
     body =
         nodes
@@ -43,7 +39,13 @@ generate = \nodes ->
     $(body)
     """
 
-# render : List Node -> Str
+RenderNode : [
+    T Str,
+    C { condition : Str, body : List RenderNode },
+    S { item : Str, list : Str, body : List RenderNode },
+]
+
+render : List RenderNode -> Str
 render = \nodes ->
     when List.map nodes nodeToStr is
         [elem] -> elem
@@ -57,7 +59,7 @@ render = \nodes ->
             """
             |> indent
 
-# nodeToStr : Node -> Str
+# nodeToStr : RenderNode -> Str
 nodeToStr = \node ->
     block =
         when node is
@@ -84,14 +86,14 @@ nodeToStr = \node ->
                 """
     indent block
 
-# convertInterpolationsToText : List Node -> List Node2
+convertInterpolationsToText : List Node -> List RenderNode
 convertInterpolationsToText = \nodes ->
     List.map nodes \node ->
         when node is
             Interpolation i -> T "\$($(i))"
+            Text t -> T t
             Sequence { item, list, body } -> S { item, list, body: convertInterpolationsToText body }
             Conditional { condition, body } -> C { condition, body: convertInterpolationsToText body }
-            Text t -> T t
     |> List.walk [] \state, elem ->
         when (state, elem) is
             ([.., T x], T y) ->
@@ -100,8 +102,9 @@ convertInterpolationsToText = \nodes ->
 
             _ -> List.append state elem
 
-indent = \in ->
-    Str.split in "\n"
+indent : Str -> Str
+indent = \input ->
+    Str.split input "\n"
     |> List.map \str ->
         Str.concat "    " str
     |> Str.joinWith "\n"
