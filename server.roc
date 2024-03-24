@@ -15,7 +15,7 @@ main = \req ->
         _ ->
             body =
                 Pages.page {
-                    name: "Isaac",
+                    name: "<p href=\"foo\">hello</p>",
                     username: "isaacvando",
                     names: ["Ashley", "Tony", "another one!!", "fooname"],
                 }

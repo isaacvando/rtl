@@ -10,7 +10,7 @@ app "engine"
 
 main =
     Pages.page {
-        name: "Isaac",
+        name: "<p href=\"foo\">hello</p>",
         username: "isaacvando",
         names: ["Ashley", "Tony"],
     }

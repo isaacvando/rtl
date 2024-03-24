@@ -31,6 +31,15 @@ compile = \template ->
         exposes [page]
         imports []
 
+    escapeHtml : Str -> Str
+    escapeHtml = \\input ->
+        input
+        |> Str.replaceEach "&" "&amp;"
+        |> Str.replaceEach "<" "&lt;"
+        |> Str.replaceEach ">" "&gt;"
+        |> Str.replaceEach "\\"" "&quot;"
+        |> Str.replaceEach "'" "&#39;"
+
     page = \\model ->
     $(body)
     """
@@ -77,7 +86,7 @@ nodeToStr = \node ->
 convertInterpolationsToText = \nodes ->
     List.map nodes \node ->
         when node is
-            Interpolation i -> Text "\$($(i))"
+            Interpolation i -> Text "\$($(i) |> escapeHtml)"
             Text t -> Text t
             Sequence { item, list, body } -> Sequence { item, list, body: convertInterpolationsToText body }
             Conditional { condition, body } -> Conditional { condition, body: convertInterpolationsToText body }

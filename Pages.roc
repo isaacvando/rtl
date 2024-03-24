@@ -2,6 +2,15 @@ interface Pages
     exposes [page]
     imports []
 
+escapeHtml : Str -> Str
+escapeHtml = \input ->
+    input
+    |> Str.replaceEach "&" "&amp;"
+    |> Str.replaceEach "<" "&lt;"
+    |> Str.replaceEach ">" "&gt;"
+    |> Str.replaceEach "\"" "&quot;"
+    |> Str.replaceEach "'" "&#39;"
+
 page = \model ->
     [
         """
@@ -14,13 +23,13 @@ page = \model ->
         </head>
         <body>
             <div>
-                <strong>$(model.name)</strong>
+                <strong>$(model.name |> escapeHtml)</strong>
                 
         """,
         if Bool.true then
             [
                 """
-                <h1>Hello, $(model.username)</h1>
+                <h1>Hello, $(model.username |> escapeHtml)</h1>
                         <p>
                             a paragraph here
                         </p>
@@ -50,19 +59,19 @@ page = \model ->
         List.map model.names \name ->
             [
                 """
-                <em>Hello, $(name)!</em>
+                <em>Hello, $(name |> escapeHtml)!</em>
                         
                 """,
                 if Str.startsWith name "foo" then
                     [
                         """
-                        $(name) starts with foo!
+                        $(name |> escapeHtml) starts with foo!
                                 <ul>
                                 
                         """,
                         List.map [1,2,3,4] \x ->
                             """
-                            <li>$(Num.toStr x)</li>
+                            <li>$(Num.toStr x |> escapeHtml)</li>
                                     
                             """
                         |> Str.joinWith "",
@@ -78,8 +87,7 @@ page = \model ->
             |> Str.joinWith ""
         |> Str.joinWith "",
         """
-        $(model.alfjasdlkjf)
-            </div>
+        </div>
         </body>
         </html>
         
