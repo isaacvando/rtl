@@ -45,7 +45,16 @@ page = \model ->
             "",
         """
         <p>paragraph after the endif</p>
-            </div>
+                
+        """,
+        List.map model.names \name ->
+            """
+            <em>Hello, $(name)!</em>
+                    
+            """
+        |> Str.joinWith "",
+        """
+        </div>
         </body>
         </html>
         

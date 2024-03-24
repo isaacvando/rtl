@@ -19,6 +19,9 @@
             {|if model.username == "isaacvando" |}inline!{|endif|}
         {|endif|}
         <p>paragraph after the endif</p>
+        {|list name : model.names |}
+        <em>Hello, {{name}}!</em>
+        {|endlist|}
     </div>
 </body>
 </html>

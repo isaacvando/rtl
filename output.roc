@@ -9,5 +9,9 @@ app "engine"
     provides [main] to pf
 
 main =
-    Pages.page { name: "Isaac", username: "isaacvando" }
+    Pages.page {
+        name: "Isaac",
+        username: "isaacvando",
+        names: ["Ashley", "Tony"],
+    }
     |> Stdout.line

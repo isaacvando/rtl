@@ -23,26 +23,31 @@ compile = \temp ->
     Parser.parse temp
     |> generate
 
-generate : List Node -> Str
+Node2 : [
+    T Str,
+    C { condition : Str, body : List Node2 },
+    S { item : Str, list : Str, body : List Node2 },
+]
+# generate : List Node -> Str
 generate = \nodes ->
-    dbg nodes
-
+    body =
+        nodes
+        |> convertInterpolationsToText
+        |> render
     """
     interface Pages
         exposes [page]
         imports []
 
     page = \\model ->
-    $(render nodes)
+    $(body)
     """
 
-render : List Node -> Str
+# render : List Node -> Str
 render = \nodes ->
-    blocks = condense nodes |> List.map nodeToStr
-
-    when blocks is
+    when List.map nodes nodeToStr is
         [elem] -> elem
-        _ ->
+        blocks ->
             list = blocks |> Str.joinWith ",\n"
             """
             [
@@ -56,14 +61,14 @@ render = \nodes ->
 nodeToStr = \node ->
     block =
         when node is
-            Text t ->
+            T t ->
                 """
                 \"""
                 $(t)
                 \"""
                 """
 
-            Conditional { condition, body } ->
+            C { condition, body } ->
                 """
                 if $(condition) then
                 $(render body)
@@ -71,25 +76,26 @@ nodeToStr = \node ->
                     ""
                 """
 
-            Sequence { item, list, body } -> ""
-            # """
-            # List.map $(list) \\$(item) ->
-            #     $(render body)
-            # |> Str.joinWith ""
-            # """
-            _ -> "not implemented"
+            S { item, list, body } ->
+                """
+                List.map $(list) \\$(item) ->
+                $(render body)
+                |> Str.joinWith ""
+                """
     indent block
 
-# condense : List Node -> List Node
-condense = \nodes ->
+# convertInterpolationsToText : List Node -> List Node2
+convertInterpolationsToText = \nodes ->
     List.map nodes \node ->
         when node is
-            Interpolation i -> Text "\$($(i))"
-            _ -> node
+            Interpolation i -> T "\$($(i))"
+            Sequence { item, list, body } -> S { item, list, body: convertInterpolationsToText body }
+            Conditional { condition, body } -> C { condition, body: convertInterpolationsToText body }
+            Text t -> T t
     |> List.walk [] \state, elem ->
         when (state, elem) is
-            ([.., Text x], Text y) ->
-                combined = Str.concat x y |> Text
+            ([.., T x], T y) ->
+                combined = Str.concat x y |> T
                 List.dropFirst state 1 |> List.append combined
 
             _ -> List.append state elem
