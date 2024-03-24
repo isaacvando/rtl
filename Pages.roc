@@ -78,7 +78,8 @@ page = \model ->
             |> Str.joinWith ""
         |> Str.joinWith "",
         """
-        </div>
+        $(model.alfjasdlkjf)
+            </div>
         </body>
         </html>
         

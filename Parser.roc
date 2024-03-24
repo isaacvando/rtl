@@ -13,7 +13,8 @@ parse : Str -> List Node
 parse = \input ->
     when Str.toUtf8 input |> (many node) is
         Match { input: [], val } -> combineTextNodes val
-        _ -> crash "There is a bug!"
+        Match _ -> crash "There is a bug! Not all input was consumed."
+        NoMatch -> crash "There is a bug! The parser failed."
 
 combineTextNodes : List Node -> List Node
 combineTextNodes = \nodes ->
