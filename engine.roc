@@ -8,26 +8,22 @@ app "engine"
         pf.Path,
         pf.File,
         Parser.{ Node },
-        "page.htmr" as template : Str,
+        "page.htmr" as page : Str,
     ]
     provides [main] to pf
 
 main =
-    {} <- File.writeUtf8 (Path.fromStr "Pages.roc") (compile template)
+    {} <- File.writeUtf8 (Path.fromStr "Pages.roc") (compile page)
         |> Task.onErr \e ->
             Stdout.line "Error writing file: $(Inspect.toStr e)"
         |> Task.await
 
     Stdout.line "Generated Pages.roc"
 
-compile = \temp ->
-    Parser.parse temp
-    |> generate
-
-generate : List Node -> Str
-generate = \nodes ->
+compile : Str -> Str
+compile = \template ->
     body =
-        nodes
+        Parser.parse template
         |> convertInterpolationsToText
         |> render
     """
@@ -87,9 +83,9 @@ convertInterpolationsToText = \nodes ->
             Conditional { condition, body } -> Conditional { condition, body: convertInterpolationsToText body }
     |> List.walk [] \state, elem ->
         when (state, elem) is
-            ([.., Text x], Text y) ->
+            ([.. as rest, Text x], Text y) ->
                 combined = Str.concat x y |> Text
-                List.dropFirst state 1 |> List.append combined
+                rest |> List.append combined
 
             _ -> List.append state elem
 
