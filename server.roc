@@ -19,5 +19,6 @@ main = \req ->
                     username: "isaacvando",
                     names: ["Ashley", "Tony", "another one!!", "fooname"],
                 }
+                |> Str.concat (Pages.hello 123)
                 |> Str.toUtf8
             Task.ok { status: 200, headers: [Http.header "Content-Type" "text/html"], body }
