@@ -34,6 +34,8 @@ combineTextNodes = \nodes ->
 
 Parser a : List U8 -> [Match { input : List U8, val : a }, NoMatch]
 
+# Parsers
+
 # node : Parser Node
 node =
     oneOf [
@@ -156,11 +158,29 @@ hSpace : Parser Str
 hSpace =
     oneOf [string " ", string "\t"]
 
+string : Str -> Parser Str
+string = \str ->
+    \input ->
+        bytes = Str.toUtf8 str
+        if List.startsWith input bytes then
+            Match { input: List.dropFirst input (List.len bytes), val: str }
+        else
+            NoMatch
+
+anyByte : Parser U8
+anyByte = \input ->
+    when input is
+        [first, .. as rest] -> Match { input: rest, val: first }
+        _ -> NoMatch
+
+# Combinators
+
 startWith : Parser a, Parser * -> Parser a
 startWith = \parser, start ->
     andThen start \_ ->
         parser
 
+endWith : Parser a, Parser * -> Parser a
 endWith = \parser, end ->
     andThen parser \m ->
         end |> map \_ -> m
@@ -183,15 +203,6 @@ many = \parser ->
             Match m -> help m.input (List.append items m.val)
 
     \input -> help input []
-
-string : Str -> Parser Str
-string = \str ->
-    \input ->
-        bytes = Str.toUtf8 str
-        if List.startsWith input bytes then
-            Match { input: List.dropFirst input (List.len bytes), val: str }
-        else
-            NoMatch
 
 optional = \parser ->
     \input ->
@@ -218,12 +229,6 @@ andThen = \parser, mapper ->
             NoMatch -> NoMatch
             Match m -> (mapper m.val) m.input
 
-anyByte : Parser U8
-anyByte = \input ->
-    when input is
-        [first, .. as rest] -> Match { input: rest, val: first }
-        _ -> NoMatch
-
 map : Parser a, (a -> b) -> Parser b
 map = \parser, mapper ->
     \in ->
@@ -236,3 +241,141 @@ unsafeFromUtf8 = \bytes ->
         Ok s -> s
         Err _ ->
             crash "I was unable to convert these bytes into a string: $(Inspect.toStr bytes)"
+
+# Tests
+
+expect
+    result = parse "foo"
+    result == [Text "foo"]
+
+expect
+    result = parse "<p>{{name}}</p>"
+    result == [Text "<p>", Interpolation "name", Text "</p>"]
+
+expect
+    result = parse "{{foo}bar}}"
+    result == [Interpolation "foo}bar"]
+
+expect
+    result = parse "{{{raw val}}}"
+    result == [RawInterpolation "raw val"]
+
+expect
+    result = parse "{{{ foo : 10 } |> \\x -> Num.toStr x.foo}}"
+    result == [Interpolation "{ foo : 10 } |> \\x -> Num.toStr x.foo"]
+
+expect
+    result = parse "{{func arg1 arg2 |> func2 arg2}}"
+    result == [Interpolation "func arg1 arg2 |> func2 arg2"]
+
+expect
+    result = parse "{|if x > y |}foo{|endif|}"
+    result == [Conditional { condition: "x > y", trueBranch: [Text "foo"], falseBranch: [] }]
+
+expect
+    result = parse
+        """
+        {|if x > y |}
+        foo
+        {|endif|}
+        """
+    result == [Conditional { condition: "x > y", trueBranch: [Text "foo"], falseBranch: [] }]
+
+expect
+    result = parse
+        """
+        {|if model.field |}
+        Hello
+        {|else|}
+        goodbye
+        {|endif|}
+        """
+    result
+    == [
+        Conditional {
+            condition: "model.field",
+            trueBranch: [Text "Hello"],
+            falseBranch: [Text "goodbye"],
+        },
+    ]
+
+expect
+    result = parse
+        """
+        {|if model.someField |}
+        {|if Bool.false |}
+        bar
+        {|endif|}
+        {|endif|}
+        """
+    result
+    == [
+        Conditional {
+            condition: "model.someField",
+            trueBranch: [
+                Conditional { condition: "Bool.false", trueBranch: [Text "bar"], falseBranch: [] },
+            ],
+            falseBranch: [],
+        },
+    ]
+
+expect
+    result = parse
+        """
+        foo
+        bar
+        {{model.baz}}
+        foo
+        """
+    result == [Text "foo\nbar\n", Interpolation "model.baz", Text "\nfoo"]
+
+expect
+    result = parse
+        """
+        <p>
+            {|if foo |}
+            bar
+            {|endif|}
+        </p>
+        """
+    result
+    == [
+        Text "<p>\n    ",
+        Conditional { condition: "foo", trueBranch: [Text "bar\n    "], falseBranch: [] },
+        Text "</p>",
+    ]
+
+expect
+    result = parse
+        """
+        <div>{|if model.username == "isaac" |}Hello{|endif|}</div>
+        """
+    result
+    ==
+    [
+        Text "<div>",
+        Conditional { condition: "model.username == \"isaac\"", trueBranch: [Text "Hello"], falseBranch: [] },
+        Text "</div>",
+    ]
+
+expect
+    result = parse
+        """
+        {|list user : users |}
+        <p>Hello {{user}}!</p>
+        {|endlist|}
+        """
+
+    result
+    ==
+    [
+        Sequence {
+            item: "user",
+            list: "users",
+            body: [
+                Text "<p>Hello ",
+                Interpolation "user",
+                Text "!</p>",
+            ],
+        },
+    ]
