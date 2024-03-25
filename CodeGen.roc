@@ -2,10 +2,10 @@ interface CodeGen
     exposes [generate]
     imports [Parser.{ Node }]
 
-generate : List Node -> Str
-generate = \nodes ->
+generate : List { name : Str, nodes : List Node } -> Str
+generate = \templates ->
     body =
-        nodes
+        []
         |> convertInterpolationsToText
         |> render
     """
@@ -26,8 +26,17 @@ generate = \nodes ->
     $(body)
     """
 
+# \""
+
+RenderNode : [
+    Text Str,
+    Conditional { condition : Str, body : List RenderNode },
+    Sequence { item : Str, list : Str, body : List RenderNode },
+]
+
+render : List RenderNode -> Str
 render = \nodes ->
-    when List.map nodes nodeToStr is
+    when List.map nodes toStr is
         [elem] -> elem
         blocks ->
             list = blocks |> Str.joinWith ",\n"
@@ -39,7 +48,8 @@ render = \nodes ->
             """
             |> indent
 
-nodeToStr = \node ->
+# toStr : RenderNode -> Str
+toStr = \node ->
     block =
         when node is
             Text t ->
@@ -65,6 +75,7 @@ nodeToStr = \node ->
                 """
     indent block
 
+convertInterpolationsToText : List Node -> List RenderNode
 convertInterpolationsToText = \nodes ->
     List.map nodes \node ->
         when node is
