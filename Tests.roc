@@ -15,6 +15,14 @@ expect
     result == [Interpolation "foo}bar"]
 
 expect
+    result = parse "{{{raw val}}}"
+    result == [RawInterpolation "raw val"]
+
+expect
+    result = parse "{{{ foo : 10 } |> \\x -> Num.toStr x.foo}}"
+    result == [Interpolation "{ foo : 10 } |> \\x -> Num.toStr x.foo"]
+
+expect
     result = parse "{{func arg1 arg2 |> func2 arg2}}"
     result == [Interpolation "func arg1 arg2 |> func2 arg2"]
 

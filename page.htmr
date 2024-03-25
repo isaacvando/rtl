@@ -30,6 +30,10 @@
         </ul>
         {|endif|}
         {|endlist|}
+
+        This should be {{{"<strong>bold</strong>"}}}
+        <br>
+        This should be {{"<strong>escaped</strong>"}}
     </div>
 </body>
 </html>

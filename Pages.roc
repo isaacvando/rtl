@@ -87,7 +87,11 @@ page = \model ->
             |> Str.joinWith ""
         |> Str.joinWith "",
         """
-        </div>
+        
+                This should be $("<strong>bold</strong>")
+                <br>
+                This should be $("<strong>escaped</strong>" |> escapeHtml)
+            </div>
         </body>
         </html>
         

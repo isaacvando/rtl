@@ -5,6 +5,7 @@ interface Parser
 Node : [
     Text Str,
     Interpolation Str,
+    RawInterpolation Str,
     Conditional { condition : Str, body : List Node },
     Sequence { item : Str, list : Str, body : List Node },
 ]
@@ -35,15 +36,27 @@ Parser a : List U8 -> [Match { input : List U8, val : a }, NoMatch]
 
 # node : Parser Node
 node =
-    oneOf [interpolation, conditional, sequence, text]
+    oneOf [
+        rawInterpolation,
+        interpolation,
+        conditional,
+        sequence,
+        text,
+    ]
 
 interpolation : Parser Node
 interpolation =
-    _ <- string "{{" |> andThen
-
     manyUntil anyByte (string "}}")
+    |> startWith (string "{{")
     |> map \bytes ->
         unsafeFromUtf8 bytes |> Interpolation
+
+rawInterpolation : Parser Node
+rawInterpolation =
+    manyUntil anyByte (string "}}}")
+    |> startWith (string "{{{")
+    |> map \bytes ->
+        unsafeFromUtf8 bytes |> RawInterpolation
 
 # conditional : Parser Node
 conditional =

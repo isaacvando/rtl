@@ -86,6 +86,7 @@ nodeToStr = \node ->
 convertInterpolationsToText = \nodes ->
     List.map nodes \node ->
         when node is
+            RawInterpolation i -> Text "\$($(i))"
             Interpolation i -> Text "\$($(i) |> escapeHtml)"
             Text t -> Text t
             Sequence { item, list, body } -> Sequence { item, list, body: convertInterpolationsToText body }
