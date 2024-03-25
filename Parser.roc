@@ -6,7 +6,7 @@ Node : [
     Text Str,
     Interpolation Str,
     RawInterpolation Str,
-    Conditional { condition : Str, body : List Node },
+    Conditional { condition : Str, trueBranch : List Node, falseBranch : List Node },
     Sequence { item : Str, list : Str, body : List Node },
 ]
 
@@ -24,8 +24,8 @@ combineTextNodes = \nodes ->
             ([.. as rest, Text t1], Text t2) ->
                 List.append rest (Text (Str.concat t1 t2))
 
-            (_, Conditional { condition, body }) ->
-                List.append state (Conditional { condition, body: combineTextNodes body })
+            (_, Conditional { condition, trueBranch, falseBranch }) ->
+                List.append state (Conditional { condition, trueBranch: combineTextNodes trueBranch, falseBranch: combineTextNodes falseBranch })
 
             (_, Sequence { item, list, body }) ->
                 List.append state (Sequence { item, list, body: combineTextNodes body })
@@ -39,7 +39,8 @@ node =
     oneOf [
         rawInterpolation,
         interpolation,
-        conditional,
+        conditionalElse,
+        conditionalIf,
         sequence,
         text,
     ]
@@ -58,8 +59,8 @@ rawInterpolation =
     |> map \bytes ->
         unsafeFromUtf8 bytes |> RawInterpolation
 
-# conditional : Parser Node
-conditional =
+# conditionalIf: Parser Node
+conditionalIf =
     condition <- manyUntil anyByte (string " |}")
         |> startWith (string "{|if ")
         |> leftoverTagSpace
@@ -70,12 +71,43 @@ conditional =
         |> startWith (optional (string "\n"))
         |> leftoverTagSpace
 
-    body <- manyUntil node endIf
+    trueBranch <- manyUntil node endIf
         |> andThen
 
     val = Conditional {
         condition: unsafeFromUtf8 condition,
-        body: body,
+        trueBranch,
+        falseBranch: [],
+    }
+
+    \input -> Match { input, val }
+
+conditionalElse =
+    condition <- manyUntil anyByte (string " |}")
+        |> startWith (string "{|if ")
+        |> leftoverTagSpace
+        |> andThen
+
+    elseSep =
+        string "{|else|}"
+        |> startWith (optional (string "\n"))
+        |> leftoverTagSpace
+
+    endIf =
+        string "{|endif|}"
+        |> startWith (optional (string "\n"))
+        |> leftoverTagSpace
+
+    trueBranch <- manyUntil node elseSep
+        |> andThen
+
+    falseBranch <- manyUntil node endIf
+        |> andThen
+
+    val = Conditional {
+        condition: unsafeFromUtf8 condition,
+        trueBranch,
+        falseBranch,
     }
 
     \input -> Match { input, val }

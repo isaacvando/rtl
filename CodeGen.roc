@@ -36,7 +36,7 @@ generate = \templates ->
 
 RenderNode : [
     Text Str,
-    Conditional { condition : Str, body : List RenderNode },
+    Conditional { condition : Str, trueBranch : List RenderNode, falseBranch : List RenderNode },
     Sequence { item : Str, list : Str, body : List RenderNode },
 ]
 
@@ -76,12 +76,12 @@ toStr = \node ->
                 \"""
                 """
 
-            Conditional { condition, body } ->
+            Conditional { condition, trueBranch, falseBranch } ->
                 """
                 if $(condition) then
-                $(renderNodes body)
+                $(renderNodes trueBranch)
                 else
-                    ""
+                $(renderNodes falseBranch)
                 """
 
             Sequence { item, list, body } ->
@@ -100,7 +100,12 @@ condense = \nodes ->
             Interpolation i -> Text "\$($(i) |> escapeHtml)"
             Text t -> Text t
             Sequence { item, list, body } -> Sequence { item, list, body: condense body }
-            Conditional { condition, body } -> Conditional { condition, body: condense body }
+            Conditional { condition, trueBranch, falseBranch } ->
+                Conditional {
+                    condition,
+                    trueBranch: condense trueBranch,
+                    falseBranch: condense falseBranch,
+                }
     |> List.walk [] \state, elem ->
         when (state, elem) is
             ([.. as rest, Text x], Text y) ->

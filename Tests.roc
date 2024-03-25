@@ -28,7 +28,7 @@ expect
 
 expect
     result = parse "{|if x > y |}foo{|endif|}"
-    result == [Conditional { condition: "x > y", body: [Text "foo"] }]
+    result == [Conditional { condition: "x > y", trueBranch: [Text "foo"], falseBranch: [] }]
 
 expect
     result = parse
@@ -37,7 +37,25 @@ expect
         foo
         {|endif|}
         """
-    result == [Conditional { condition: "x > y", body: [Text "foo"] }]
+    result == [Conditional { condition: "x > y", trueBranch: [Text "foo"], falseBranch: [] }]
+
+expect
+    result = parse
+        """
+        {|if model.field |}
+        Hello
+        {|else|}
+        goodbye
+        {|endif|}
+        """
+    result
+    == [
+        Conditional {
+            condition: "model.field",
+            trueBranch: [Text "Hello"],
+            falseBranch: [Text "goodbye"],
+        },
+    ]
 
 expect
     result = parse
@@ -52,9 +70,10 @@ expect
     == [
         Conditional {
             condition: "model.someField",
-            body: [
-                Conditional { condition: "Bool.false", body: [Text "bar"] },
+            trueBranch: [
+                Conditional { condition: "Bool.false", trueBranch: [Text "bar"], falseBranch: [] },
             ],
+            falseBranch: [],
         },
     ]
 
@@ -80,7 +99,7 @@ expect
     result
     == [
         Text "<p>\n    ",
-        Conditional { condition: "foo", body: [Text "bar\n    "] },
+        Conditional { condition: "foo", trueBranch: [Text "bar\n    "], falseBranch: [] },
         Text "</p>",
     ]
 
@@ -93,7 +112,7 @@ expect
     ==
     [
         Text "<div>",
-        Conditional { condition: "model.username == \"isaac\"", body: [Text "Hello"] },
+        Conditional { condition: "model.username == \"isaac\"", trueBranch: [Text "Hello"], falseBranch: [] },
         Text "</div>",
     ]
 

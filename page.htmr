@@ -31,9 +31,12 @@
         {|endif|}
         {|endlist|}
 
+        {|if Bool.false |}
         This should be {{{"<strong>bold</strong>"}}}
         <br>
+        {|else|}
         This should be {{"<strong>escaped</strong>"}}
+        {|endif|}
     </div>
 </body>
 </html>

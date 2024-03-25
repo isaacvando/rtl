@@ -35,17 +35,26 @@ page = \model ->
                                     
                         """
                 else
-                    "",
+                    [
+                    
+                    ]
+                    |> Str.joinWith "",
                 if model.username == "isaacvando" then
                         """
                         inline!
                         """
                 else
-                    ""
+                    [
+                    
+                    ]
+                    |> Str.joinWith ""
             ]
             |> Str.joinWith ""
         else
-            "",
+            [
+            
+            ]
+            |> Str.joinWith "",
         """
         <p>paragraph after the endif</p>
                 
@@ -76,16 +85,30 @@ page = \model ->
                     ]
                     |> Str.joinWith ""
                 else
-                    ""
+                    [
+                    
+                    ]
+                    |> Str.joinWith ""
             ]
             |> Str.joinWith ""
         |> Str.joinWith "",
         """
         
+                
+        """,
+        if Bool.false then
+                """
                 This should be $("<strong>bold</strong>")
-                <br>
+                        <br>
+                        
+                """
+        else
+                """
                 This should be $("<strong>escaped</strong>" |> escapeHtml)
-            </div>
+                        
+                """,
+        """
+        </div>
         </body>
         </html>
         
