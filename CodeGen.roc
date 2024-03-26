@@ -30,7 +30,7 @@ generate = \templates ->
         |> Str.replaceEach ">" "&gt;"
         |> Str.replaceEach "\\"" "&quot;"
         |> Str.replaceEach "'" "&#39;"
-        
+
     """
 
 # \""
@@ -48,14 +48,15 @@ renderTemplate = \{ name, nodes } ->
         |> renderNodes
 
     """
-    $(name) = \\model -> 
+    $(name) = \\model ->
     $(body)
     """
 
 renderNodes : List RenderNode -> Str
 renderNodes = \nodes ->
     when List.map nodes toStr is
-        [elem] -> elem |> indent
+        [] -> "\"\"" |> indent
+        [elem] -> elem
         blocks ->
             list = blocks |> Str.joinWith ",\n"
             """
@@ -70,11 +71,14 @@ toStr = \node ->
     block =
         when node is
             Text t ->
-                """
-                \"""
-                $(t)
-                \"""
-                """
+                if Str.contains t "\n" then
+                    """
+                    \"""
+                    $(t)
+                    \"""
+                    """
+                else
+                    "\"$(t)\""
 
             Conditional { condition, trueBranch, falseBranch } ->
                 """

@@ -5,7 +5,7 @@ interface Pages
     ]
     imports []
 
-page = \model -> 
+page = \model ->
     [
         """
         <!DOCTYPE html>
@@ -30,31 +30,20 @@ page = \model ->
                             
                 """,
                 if Bool.true then
-                        """
-                        nesting!
-                                    
-                        """
+                    """
+                    nesting!
+                                
+                    """
                 else
-                    [
-                    
-                    ]
-                    |> Str.joinWith "",
+                    "",
                 if model.username == "isaacvando" then
-                        """
-                        inline!
-                        """
+                    "inline!"
                 else
-                    [
-                    
-                    ]
-                    |> Str.joinWith ""
+                    ""
             ]
             |> Str.joinWith ""
         else
-            [
-            
-            ]
-            |> Str.joinWith "",
+            "",
         """
         <p>paragraph after the endif</p>
                 
@@ -73,10 +62,10 @@ page = \model ->
                                 
                         """,
                         List.map [1,2,3,4] \x ->
-                                """
-                                <li>$(Num.toStr x |> escapeHtml)</li>
-                                        
-                                """
+                            """
+                            <li>$(Num.toStr x |> escapeHtml)</li>
+                                    
+                            """
                         |> Str.joinWith "",
                         """
                         </ul>
@@ -85,10 +74,7 @@ page = \model ->
                     ]
                     |> Str.joinWith ""
                 else
-                    [
-                    
-                    ]
-                    |> Str.joinWith ""
+                    ""
             ]
             |> Str.joinWith ""
         |> Str.joinWith "",
@@ -97,16 +83,16 @@ page = \model ->
                 
         """,
         if Bool.false then
-                """
-                This should be $("<strong>bold</strong>")
-                        <br>
-                        
-                """
+            """
+            This should be $("<strong>bold</strong>")
+                    <br>
+                    
+            """
         else
-                """
-                This should be $("<strong>escaped</strong>" |> escapeHtml)
-                        
-                """,
+            """
+            This should be $("<strong>escaped</strong>" |> escapeHtml)
+                    
+            """,
         """
         </div>
         </body>
@@ -116,12 +102,18 @@ page = \model ->
     ]
     |> Str.joinWith ""
 
-hello = \model -> 
+hello = \model ->
+    [
         """
         Hello $(Num.toStr model |> escapeHtml)
         
         
-        """
+        """,
+        List.map [1,2] \foo ->
+            ""
+        |> Str.joinWith ""
+    ]
+    |> Str.joinWith ""
 
 escapeHtml : Str -> Str
 escapeHtml = \input ->
@@ -131,4 +123,3 @@ escapeHtml = \input ->
     |> Str.replaceEach ">" "&gt;"
     |> Str.replaceEach "\"" "&quot;"
     |> Str.replaceEach "'" "&#39;"
-    
