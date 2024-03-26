@@ -111,7 +111,15 @@ hello = \model ->
         """,
         List.map [1,2] \foo ->
             ""
-        |> Str.joinWith ""
+        |> Str.joinWith "",
+        """
+        
+        \$(foo)
+        
+        I made \$400 today!! \$\$\$\$\$\$ 
+        \$\$ \$\$ \$\$ \$() \$9)
+        
+        """
     ]
     |> Str.joinWith ""
 

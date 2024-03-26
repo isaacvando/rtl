@@ -2,3 +2,5 @@ Hello {{Num.toStr model}}
 
 {|list foo : [1,2] |}
 {|endlist|}
+
+$(foo)

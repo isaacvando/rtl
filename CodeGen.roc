@@ -102,7 +102,11 @@ condense = \nodes ->
         when node is
             RawInterpolation i -> Text "\$($(i))"
             Interpolation i -> Text "\$($(i) |> escapeHtml)"
-            Text t -> Text t
+            Text t ->
+                # Escape Roc string interpolations from the template
+                escaped = Str.replaceEach t "$" "\\$"
+                Text escaped
+
             Sequence { item, list, body } -> Sequence { item, list, body: condense body }
             Conditional { condition, trueBranch, falseBranch } ->
                 Conditional {
