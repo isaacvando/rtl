@@ -51,7 +51,7 @@ keepTemplates : List Path -> List Path
 keepTemplates = \paths ->
     List.keepIf paths \p ->
         Path.display p
-        |> Str.endsWith ".htmr"
+        |> Str.endsWith extension
 
 compile : List { path : Path, template : Str } -> Str
 compile = \templates ->
@@ -64,7 +64,9 @@ extractFunctionName : Path -> Str
 extractFunctionName = \path ->
     display = Path.display path
     when Str.split display "/" is
-        [.., filename] if Str.endsWith filename ".htmr" ->
-            Str.replaceLast filename ".htmr" ""
+        [.., filename] if Str.endsWith filename extension ->
+            Str.replaceLast filename extension ""
 
         _ -> crash "Error: $(display) is not a valid template path"
+
+extension = ".rtl"

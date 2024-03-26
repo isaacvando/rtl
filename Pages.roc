@@ -120,6 +120,7 @@ hello = \model ->
         """
         Hello $(Num.toStr model |> escapeHtml)
         
+        
         """
 
 escapeHtml : Str -> Str
@@ -130,3 +131,4 @@ escapeHtml = \input ->
     |> Str.replaceEach ">" "&gt;"
     |> Str.replaceEach "\"" "&quot;"
     |> Str.replaceEach "'" "&#39;"
+    

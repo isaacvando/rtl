@@ -30,6 +30,7 @@ generate = \templates ->
         |> Str.replaceEach ">" "&gt;"
         |> Str.replaceEach "\\"" "&quot;"
         |> Str.replaceEach "'" "&#39;"
+        
     """
 
 # \""
@@ -65,7 +66,6 @@ renderNodes = \nodes ->
             """
             |> indent
 
-# toStr : RenderNode -> Str
 toStr = \node ->
     block =
         when node is

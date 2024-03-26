@@ -36,7 +36,6 @@ Parser a : List U8 -> [Match { input : List U8, val : a }, NoMatch]
 
 # Parsers
 
-# node : Parser Node
 node =
     oneOf [
         rawInterpolation,
@@ -61,7 +60,6 @@ rawInterpolation =
     |> map \bytes ->
         unsafeFromUtf8 bytes |> RawInterpolation
 
-# conditionalIf: Parser Node
 conditionalIf =
     condition <- manyUntil anyByte (string " |}")
         |> startWith (string "{|if ")
