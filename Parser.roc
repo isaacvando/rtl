@@ -51,14 +51,18 @@ interpolation =
     manyUntil anyByte (string "}}")
     |> startWith (string "{{")
     |> map \bytes ->
-        unsafeFromUtf8 bytes |> Interpolation
+        unsafeFromUtf8 bytes
+        |> Str.trim
+        |> Interpolation
 
 rawInterpolation : Parser Node
 rawInterpolation =
     manyUntil anyByte (string "}}}")
     |> startWith (string "{{{")
     |> map \bytes ->
-        unsafeFromUtf8 bytes |> RawInterpolation
+        unsafeFromUtf8 bytes
+        |> Str.trim
+        |> RawInterpolation
 
 conditionalIf =
     condition <- manyUntil anyByte (string " |}")
@@ -372,7 +376,7 @@ expect
             body: [
                 Text "<p>Hello ",
                 Interpolation "user",
-                Text "!</p>",
+                Text "!</p>\n",
             ],
         },
     ]

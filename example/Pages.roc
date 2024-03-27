@@ -1,136 +1,59 @@
 interface Pages
     exposes [
-        page,
-        hello
+        blogPost,
+        home
     ]
     imports []
 
-page = \model ->
+blogPost = \model ->
+    """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <title>$(model.post.title |> escapeHtml) - Roc Template Example</title>
+    </head>
+    <body>
+        <div>
+            <h1>$(model.post.title |> escapeHtml)</h1>
+            <p>$(model.post.text |> escapeHtml)</p>
+            <a href="/">Home</a>
+        </div>
+    </body>
+    </html>
+    
+    """
+
+home = \model ->
     [
         """
         <!DOCTYPE html>
         <html>
         <head>
             <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-            <title>Roc Template Example</title>
-            <link rel="icon" href="/favicon.svg">
+            <title>Roc Template Example Blog</title>
         </head>
         <body>
             <div>
-                <strong>$(model.name |> escapeHtml)</strong>
+                <h1>Posts</h1>
+                <ul>
                 
         """,
-        if Bool.true then
-            [
-                """
-                <h1>Hello, $(model.username |> escapeHtml)</h1>
-                        <p>
-                            a paragraph here
-                        </p>
-                            
-                """,
-                if Bool.true then
-                    """
-                    nesting!
-                                
-                    """
-                else
-                    "",
-                if model.username == "isaacvando" then
-                    """
-                    inline!
-                    """
-                else
-                    ""
-            ]
-            |> Str.joinWith ""
-        else
-            "",
-        """
-        <p>paragraph after the endif</p>
-                
-        """,
-        List.map model.names \name ->
-            [
-                """
-                <em>Hello, $(name |> escapeHtml)!</em>
-                        
-                """,
-                if Str.startsWith name "foo" then
-                    [
-                        """
-                        $(name |> escapeHtml) starts with foo!
-                                <ul>
-                                
-                        """,
-                        List.map [1,2,3,4] \x ->
-                            """
-                            <li>$(Num.toStr x |> escapeHtml)</li>
-                                    
-                            """
-                        |> Str.joinWith "",
-                        """
-                        </ul>
-                                
-                        """
-                    ]
-                    |> Str.joinWith ""
-                else
-                    ""
-            ]
-            |> Str.joinWith ""
-        |> Str.joinWith "",
-        """
-        
-                
-        """,
-        if Bool.false then
+        List.map model.posts \post ->
             """
-            This should be $("<strong>bold</strong>")
-                    <br>
+            <li>
+                            <a href="/posts/$(post.slug |> escapeHtml)">$(post.title |> escapeHtml)</a>
+                        </li>
                     
-            """
-        else
-            """
-            This should be $("<strong>escaped</strong>" |> escapeHtml)
-                    
-            """,
-        """
-        </div>
-        </body>
-        </html>
-        
-        """
-    ]
-    |> Str.joinWith ""
-
-hello = \model ->
-    [
-        """
-        <p>Hello, $(model.name |> escapeHtml)!</p>
-        
-        <ul>
-        
-        """,
-        List.map model.numbers \number ->
-            """
-            <li>$(Num.toStr number |> escapeHtml)</li>
-            
             """
         |> Str.joinWith "",
         """
         </ul>
+            </div>
+        </body>
+        </html>
         
-        
-        """,
-        if model.isSubscribed then
-            """
-            <a href="/subscription">Subscription</a>
-            """
-        else
-            """
-            <a href="/signup">Sign up</a>
-            """
+        """
     ]
     |> Str.joinWith ""
 
