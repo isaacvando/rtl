@@ -37,7 +37,9 @@ page = \model ->
                 else
                     "",
                 if model.username == "isaacvando" then
-                    "inline!"
+                    """
+                    inline!
+                    """
                 else
                     ""
             ]
@@ -105,21 +107,30 @@ page = \model ->
 hello = \model ->
     [
         """
-        Hello $(Num.toStr model |> escapeHtml)
+        <p>Hello, $(model.name |> escapeHtml)!</p>
+        
+        <ul>
+        
+        """,
+        List.map model.numbers \number ->
+            """
+            <li>$(Num.toStr number |> escapeHtml)</li>
+            
+            """
+        |> Str.joinWith "",
+        """
+        </ul>
         
         
         """,
-        List.map [1,2] \foo ->
-            ""
-        |> Str.joinWith "",
-        """
-        
-        \$(foo)
-        
-        I made \$400 today!! \$\$\$\$\$\$ 
-        \$\$ \$\$ \$\$ \$() \$9)
-        
-        """
+        if model.isSubscribed then
+            """
+            <a href="/subscription">Subscription</a>
+            """
+        else
+            """
+            <a href="/signup">Sign up</a>
+            """
     ]
     |> Str.joinWith ""
 

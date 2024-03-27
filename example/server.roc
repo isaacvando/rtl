@@ -11,7 +11,6 @@ app "server"
 main : Request -> Task Response []
 main = \req ->
     when Str.split req.url "/" is
-        [_, "favicon.svg"] -> Task.ok { status: 200, headers: [Http.header "Content-Type" "image/svg+xml"], body: favicon }
         _ ->
             body =
                 Pages.page {

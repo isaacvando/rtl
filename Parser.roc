@@ -125,7 +125,6 @@ sequence =
 
     endList =
         string "{|endlist|}"
-        |> startWith (optional (string "\n"))
         |> leftoverTagSpace
 
     body <- manyUntil node endList

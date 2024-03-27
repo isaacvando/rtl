@@ -1,3 +1,5 @@
 server
 engine
 output
+compile
+output.roc

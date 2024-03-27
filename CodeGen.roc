@@ -71,14 +71,11 @@ toStr = \node ->
     block =
         when node is
             Text t ->
-                if Str.contains t "\n" then
-                    """
-                    \"""
-                    $(t)
-                    \"""
-                    """
-                else
-                    "\"$(t)\""
+                """
+                \"""
+                $(t)
+                \"""
+                """
 
             Conditional { condition, trueBranch, falseBranch } ->
                 """
