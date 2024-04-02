@@ -67,13 +67,10 @@ rawInterpolation =
 conditionalIf =
     condition <- manyUntil anyByte (string " |}")
         |> startWith (string "{|if ")
-        |> leftoverTagSpace
         |> try
 
     endIf =
         string "{|endif|}"
-        |> startWith (optional (string "\n"))
-        |> leftoverTagSpace
 
     trueBranch <- manyUntil node endIf
         |> try
@@ -89,18 +86,13 @@ conditionalIf =
 conditionalElse =
     condition <- manyUntil anyByte (string " |}")
         |> startWith (string "{|if ")
-        |> leftoverTagSpace
         |> try
 
     elseSep =
         string "{|else|}"
-        |> startWith (optional (string "\n"))
-        |> leftoverTagSpace
 
     endIf =
         string "{|endif|}"
-        |> startWith (optional (string "\n"))
-        |> leftoverTagSpace
 
     trueBranch <- manyUntil node elseSep
         |> try
@@ -124,12 +116,10 @@ sequence =
 
     list <-
         manyUntil anyByte (string " |}")
-        |> leftoverTagSpace
         |> try
 
     endList =
         string "{|endlist|}"
-        |> leftoverTagSpace
 
     body <- manyUntil node endList
         |> try
@@ -142,22 +132,12 @@ sequence =
 
     \input -> Match { input, val }
 
-leftoverTagSpace : Parser a -> Parser a
-leftoverTagSpace = \parser ->
-    parser
-    |> endWith (optional (string "\n"))
-    |> endWith (many hSpace)
-
 text : Parser Node
 text =
     anyByte
     |> map \byte ->
         unsafeFromUtf8 [byte]
         |> Text
-
-hSpace : Parser Str
-hSpace =
-    oneOf [string " ", string "\t"]
 
 string : Str -> Parser Str
 string = \str ->
@@ -280,7 +260,7 @@ expect
         foo
         {|endif|}
         """
-    result == [Conditional { condition: "x > y", trueBranch: [Text "foo"], falseBranch: [] }]
+    result == [Conditional { condition: "x > y", trueBranch: [Text "\nfoo\n"], falseBranch: [] }]
 
 expect
     result = parse
@@ -295,8 +275,8 @@ expect
     == [
         Conditional {
             condition: "model.field",
-            trueBranch: [Text "Hello"],
-            falseBranch: [Text "goodbye"],
+            trueBranch: [Text "\nHello\n"],
+            falseBranch: [Text "\ngoodbye\n"],
         },
     ]
 
@@ -314,7 +294,9 @@ expect
         Conditional {
             condition: "model.someField",
             trueBranch: [
-                Conditional { condition: "Bool.false", trueBranch: [Text "bar"], falseBranch: [] },
+                Text "\n",
+                Conditional { condition: "Bool.false", trueBranch: [Text "\nbar\n"], falseBranch: [] },
+                Text "\n",
             ],
             falseBranch: [],
         },
@@ -342,8 +324,8 @@ expect
     result
     == [
         Text "<p>\n    ",
-        Conditional { condition: "foo", trueBranch: [Text "bar\n    "], falseBranch: [] },
-        Text "</p>",
+        Conditional { condition: "foo", trueBranch: [Text "\n    bar\n    "], falseBranch: [] },
+        Text "\n</p>",
     ]
 
 expect
@@ -374,7 +356,7 @@ expect
             item: "user",
             list: "users",
             body: [
-                Text "<p>Hello ",
+                Text "\n<p>Hello ",
                 Interpolation "user",
                 Text "!</p>\n",
             ],
