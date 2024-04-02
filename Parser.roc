@@ -48,7 +48,6 @@ node =
 
 interpolation : Parser Node
 interpolation =
-
     manyUntil anyByte (string "}}")
     |> startWith (string "{{")
     |> map \bytes ->
@@ -243,31 +242,6 @@ unsafeFromUtf8 = \bytes ->
         Ok s -> s
         Err _ ->
             crash "I was unable to convert these bytes into a string: $(Inspect.toStr bytes)"
-
-keep : Parser (a -> b), Parser a -> Parser b
-keep = \mapper, parser ->
-    \input ->
-        when mapper input is
-            NoMatch -> NoMatch
-            Match m ->
-                when parser m.input is
-                    NoMatch -> NoMatch
-                    Match m2 -> Match { input: m2.input, val: m.val m2.val }
-
-skip : Parser a, Parser * -> Parser a
-skip = \mapper, parser ->
-    \input ->
-        when mapper input is
-            NoMatch -> NoMatch
-            Match m ->
-                when parser m.input is
-                    NoMatch -> NoMatch
-                    Match m2 -> Match { input: m2.input, val: m.val }
-
-const : (a -> b) -> Parser (a -> b)
-const = \func ->
-    \input ->
-        Match { val: func, input }
 
 # Tests
 
