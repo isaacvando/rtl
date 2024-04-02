@@ -40,8 +40,7 @@ node =
     oneOf [
         rawInterpolation,
         interpolation,
-        conditionalElse,
-        conditionalIf,
+        conditional,
         sequence,
         text,
     ]
@@ -68,32 +67,22 @@ rawInterpolation =
     |> Str.trim
     |> RawInterpolation
 
-conditionalIf =
+conditional =
     (condition, _) <- manyUntil anyByte (string " |}")
         |> startWith (string "{|if ")
         |> try
 
-    (trueBranch, _) <- manyUntil node (string "{|endif|}")
-        |> map
-
-    Conditional {
-        condition: unsafeFromUtf8 condition,
-        trueBranch,
-        falseBranch: [],
-    }
-
-# branch = \(parser1, branch1), (par)
-
-conditionalElse =
-    (condition, _) <- manyUntil anyByte (string " |}")
-        |> startWith (string "{|if ")
+    (trueBranch, separator) <- manyUntil node (oneOf [string "{|endif|}", string "{|else|}"])
         |> try
 
-    (trueBranch, _) <- manyUntil node (string "{|else|}")
-        |> try
+    parseFalseBranch =
+        if separator == "{|endif|}" then
+            \input -> Match { input, val: [] }
+        else
+            manyUntil node (string "{|endif|}")
+            |> map .0
 
-    (falseBranch, _) <- manyUntil node (string "{|endif|}")
-        |> map
+    falseBranch <- parseFalseBranch |> map
 
     Conditional {
         condition: unsafeFromUtf8 condition,
