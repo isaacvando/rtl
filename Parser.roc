@@ -48,28 +48,32 @@ node =
 
 interpolation : Parser Node
 interpolation =
-    manyUntil anyByte (string "}}")
-    |> startWith (string "{{")
-    |> map \bytes ->
-        unsafeFromUtf8 bytes
-        |> Str.trim
-        |> Interpolation
+    (bytes, _) <- manyUntil anyByte (string "}}")
+        |> startWith (string "{{")
+        |> map
+
+    bytes
+    |> unsafeFromUtf8
+    |> Str.trim
+    |> Interpolation
 
 rawInterpolation : Parser Node
 rawInterpolation =
-    manyUntil anyByte (string "}}}")
-    |> startWith (string "{{{")
-    |> map \bytes ->
-        unsafeFromUtf8 bytes
-        |> Str.trim
-        |> RawInterpolation
+    (bytes, _) <- manyUntil anyByte (string "}}}")
+        |> startWith (string "{{{")
+        |> map
+
+    bytes
+    |> unsafeFromUtf8
+    |> Str.trim
+    |> RawInterpolation
 
 conditionalIf =
-    condition <- manyUntil anyByte (string " |}")
+    (condition, _) <- manyUntil anyByte (string " |}")
         |> startWith (string "{|if ")
         |> try
 
-    trueBranch <- manyUntil node (string "{|endif|}")
+    (trueBranch, _) <- manyUntil node (string "{|endif|}")
         |> map
 
     Conditional {
@@ -78,15 +82,17 @@ conditionalIf =
         falseBranch: [],
     }
 
+# branch = \(parser1, branch1), (par)
+
 conditionalElse =
-    condition <- manyUntil anyByte (string " |}")
+    (condition, _) <- manyUntil anyByte (string " |}")
         |> startWith (string "{|if ")
         |> try
 
-    trueBranch <- manyUntil node (string "{|else|}")
+    (trueBranch, _) <- manyUntil node (string "{|else|}")
         |> try
 
-    falseBranch <- manyUntil node (string "{|endif|}")
+    (falseBranch, _) <- manyUntil node (string "{|endif|}")
         |> map
 
     Conditional {
@@ -97,15 +103,15 @@ conditionalElse =
 
 sequence : Parser Node
 sequence =
-    item <- manyUntil anyByte (string " : ")
+    (item, _) <- manyUntil anyByte (string " : ")
         |> startWith (string "{|list ")
         |> try
 
-    list <-
+    (list, _) <-
         manyUntil anyByte (string " |}")
         |> try
 
-    body <- manyUntil node (string "{|endlist|}")
+    (body, _) <- manyUntil node (string "{|endlist|}")
         |> map
 
     Sequence {
@@ -162,11 +168,11 @@ many = \parser ->
 
     \input -> help input []
 
-manyUntil : Parser a, Parser * -> Parser (List a)
+manyUntil : Parser a, Parser b -> Parser (List a, b)
 manyUntil = \parser, end ->
     help = \input, items ->
         when end input is
-            Match state -> Match { input: state.input, val: items }
+            Match endMatch -> Match { input: endMatch.input, val: (items, endMatch.val) }
             NoMatch ->
                 when parser input is
                     NoMatch -> NoMatch
