@@ -48,25 +48,22 @@ node =
 
 interpolation : Parser Node
 interpolation =
-    collect = \exp ->
-        unsafeFromUtf8 exp
+
+    manyUntil anyByte (string "}}")
+    |> startWith (string "{{")
+    |> map \bytes ->
+        unsafeFromUtf8 bytes
         |> Str.trim
         |> Interpolation
 
-    const collect
-    |> skip (string "{{")
-    |> keep (manyUntil anyByte (string "}}"))
-
 rawInterpolation : Parser Node
 rawInterpolation =
-    collect = \exp ->
-        unsafeFromUtf8 exp
+    manyUntil anyByte (string "}}}")
+    |> startWith (string "{{{")
+    |> map \bytes ->
+        unsafeFromUtf8 bytes
         |> Str.trim
         |> RawInterpolation
-
-    const collect
-    |> skip (string "{{{")
-    |> keep (manyUntil anyByte (string "}}}"))
 
 conditionalIf =
     condition <- manyUntil anyByte (string " |}")
