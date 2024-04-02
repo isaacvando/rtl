@@ -15,7 +15,7 @@ parse = \input ->
     when Str.toUtf8 input |> (many node) is
         Match { input: [], val } -> combineTextNodes val
         Match _ -> crash "There is a bug! Not all input was consumed."
-        NoMatch -> crash "There is a bug! The parser failed."
+        NoMatch -> crash "There is a bug! The parser didn't match."
 
 combineTextNodes : List Node -> List Node
 combineTextNodes = \nodes ->
@@ -69,44 +69,31 @@ conditionalIf =
         |> startWith (string "{|if ")
         |> try
 
-    endIf =
-        string "{|endif|}"
+    trueBranch <- manyUntil node (string "{|endif|}")
+        |> map
 
-    trueBranch <- manyUntil node endIf
-        |> try
-
-    val = Conditional {
+    Conditional {
         condition: unsafeFromUtf8 condition,
         trueBranch,
         falseBranch: [],
     }
-
-    \input -> Match { input, val }
 
 conditionalElse =
     condition <- manyUntil anyByte (string " |}")
         |> startWith (string "{|if ")
         |> try
 
-    elseSep =
-        string "{|else|}"
-
-    endIf =
-        string "{|endif|}"
-
-    trueBranch <- manyUntil node elseSep
+    trueBranch <- manyUntil node (string "{|else|}")
         |> try
 
-    falseBranch <- manyUntil node endIf
-        |> try
+    falseBranch <- manyUntil node (string "{|endif|}")
+        |> map
 
-    val = Conditional {
+    Conditional {
         condition: unsafeFromUtf8 condition,
         trueBranch,
         falseBranch,
     }
-
-    \input -> Match { input, val }
 
 sequence : Parser Node
 sequence =
@@ -118,19 +105,14 @@ sequence =
         manyUntil anyByte (string " |}")
         |> try
 
-    endList =
-        string "{|endlist|}"
+    body <- manyUntil node (string "{|endlist|}")
+        |> map
 
-    body <- manyUntil node endList
-        |> try
-
-    val = Sequence {
+    Sequence {
         item: unsafeFromUtf8 item,
         list: unsafeFromUtf8 list,
         body: body,
     }
-
-    \input -> Match { input, val }
 
 text : Parser Node
 text =
@@ -161,11 +143,6 @@ startWith = \parser, start ->
     try start \_ ->
         parser
 
-endWith : Parser a, Parser * -> Parser a
-endWith = \parser, end ->
-    try parser \m ->
-        end |> map \_ -> m
-
 oneOf : List (Parser a) -> Parser a
 oneOf = \options ->
     when options is
@@ -184,12 +161,6 @@ many = \parser ->
             Match m -> help m.input (List.append items m.val)
 
     \input -> help input []
-
-optional = \parser ->
-    \input ->
-        when parser input is
-            NoMatch -> Match { input, val: {} }
-            Match m -> Match { input: m.input, val: {} }
 
 manyUntil : Parser a, Parser * -> Parser (List a)
 manyUntil = \parser, end ->

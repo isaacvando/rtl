@@ -41,14 +41,16 @@ home = \model ->
         """,
         List.map model.posts \post ->
             """
-            <li>
+            
+                        <li>
                             <a href="/posts/$(post.slug |> escapeHtml)">$(post.title |> escapeHtml)</a>
                         </li>
                     
             """
         |> Str.joinWith "",
         """
-        </ul>
+        
+                </ul>
             </div>
         </body>
         </html>
