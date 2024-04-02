@@ -68,7 +68,7 @@ conditionalIf =
     condition <- manyUntil anyByte (string " |}")
         |> startWith (string "{|if ")
         |> leftoverTagSpace
-        |> andThen
+        |> try
 
     endIf =
         string "{|endif|}"
@@ -76,7 +76,7 @@ conditionalIf =
         |> leftoverTagSpace
 
     trueBranch <- manyUntil node endIf
-        |> andThen
+        |> try
 
     val = Conditional {
         condition: unsafeFromUtf8 condition,
@@ -90,7 +90,7 @@ conditionalElse =
     condition <- manyUntil anyByte (string " |}")
         |> startWith (string "{|if ")
         |> leftoverTagSpace
-        |> andThen
+        |> try
 
     elseSep =
         string "{|else|}"
@@ -103,10 +103,10 @@ conditionalElse =
         |> leftoverTagSpace
 
     trueBranch <- manyUntil node elseSep
-        |> andThen
+        |> try
 
     falseBranch <- manyUntil node endIf
-        |> andThen
+        |> try
 
     val = Conditional {
         condition: unsafeFromUtf8 condition,
@@ -120,19 +120,19 @@ sequence : Parser Node
 sequence =
     item <- manyUntil anyByte (string " : ")
         |> startWith (string "{|list ")
-        |> andThen
+        |> try
 
     list <-
         manyUntil anyByte (string " |}")
         |> leftoverTagSpace
-        |> andThen
+        |> try
 
     endList =
         string "{|endlist|}"
         |> leftoverTagSpace
 
     body <- manyUntil node endList
-        |> andThen
+        |> try
 
     val = Sequence {
         item: unsafeFromUtf8 item,
@@ -178,12 +178,12 @@ anyByte = \input ->
 
 startWith : Parser a, Parser * -> Parser a
 startWith = \parser, start ->
-    andThen start \_ ->
+    try start \_ ->
         parser
 
 endWith : Parser a, Parser * -> Parser a
 endWith = \parser, end ->
-    andThen parser \m ->
+    try parser \m ->
         end |> map \_ -> m
 
 oneOf : List (Parser a) -> Parser a
@@ -223,8 +223,8 @@ manyUntil = \parser, end ->
 
     \input -> help input []
 
-andThen : Parser a, (a -> Parser b) -> Parser b
-andThen = \parser, mapper ->
+try : Parser a, (a -> Parser b) -> Parser b
+try = \parser, mapper ->
     \input ->
         when parser input is
             NoMatch -> NoMatch
