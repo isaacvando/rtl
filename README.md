@@ -1,5 +1,5 @@
-# roc-template
-An HTML template language for Roc. 
+# Roc Template Language (RTL)
+An HTML template language with compile time validation for Roc.
 
 ## Example
 
