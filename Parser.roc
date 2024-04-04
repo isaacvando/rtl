@@ -8,6 +8,7 @@ Node : [
     RawInterpolation Str,
     Conditional { condition : Str, trueBranch : List Node, falseBranch : List Node },
     Sequence { item : Str, list : Str, body : List Node },
+    WhenIs { expression : Str, cases : List { pattern : Str, branch : List Node } },
 ]
 
 parse : Str -> List Node
@@ -30,6 +31,14 @@ combineTextNodes = \nodes ->
             (_, Sequence { item, list, body }) ->
                 List.append state (Sequence { item, list, body: combineTextNodes body })
 
+            (_, WhenIs { expression, cases }) ->
+                combined = WhenIs {
+                    expression,
+                    cases: List.map cases \{ pattern, branch } ->
+                        { pattern, branch: combineTextNodes branch },
+                }
+                List.append state combined
+
             _ -> List.append state elem
 
 Parser a : List U8 -> [Match { input : List U8, val : a }, NoMatch]
@@ -40,8 +49,9 @@ node =
     oneOf [
         rawInterpolation,
         interpolation,
-        conditional,
         sequence,
+        whenIs,
+        conditional,
         text,
     ]
 
@@ -67,6 +77,53 @@ rawInterpolation =
     |> Str.trim
     |> RawInterpolation
 
+whenIs : Parser Node
+whenIs =
+    endWithWhitespace = \str ->
+        _ <- string str |> try
+        whitespace
+
+    (expression, _) <- manyUntil anyByte (endWithWhitespace " |}")
+        |> startWith (string "{|when ")
+        |> try
+
+    case =
+        (pattern, _) <- manyUntil anyByte (string " |}")
+            |> startWith (string "{|is ")
+            |> try
+
+        branch <- manyBefore node (oneOf [string "{|is ", string "{|endwhen|}"])
+            |> map
+
+        { pattern: unsafeFromUtf8 pattern, branch }
+
+    (cases, _) <- manyUntil case (string "{|endwhen|}")
+        |> map
+
+    WhenIs {
+        expression: unsafeFromUtf8 expression,
+        cases,
+    }
+
+sequence : Parser Node
+sequence =
+    (item, _) <- manyUntil anyByte (string " : ")
+        |> startWith (string "{|list ")
+        |> try
+
+    (list, _) <-
+        manyUntil anyByte (string " |}")
+        |> try
+
+    (body, _) <- manyUntil node (string "{|endlist|}")
+        |> map
+
+    Sequence {
+        item: unsafeFromUtf8 item,
+        list: unsafeFromUtf8 list,
+        body: body,
+    }
+
 conditional =
     (condition, _) <- manyUntil anyByte (string " |}")
         |> startWith (string "{|if ")
@@ -90,25 +147,6 @@ conditional =
         falseBranch,
     }
 
-sequence : Parser Node
-sequence =
-    (item, _) <- manyUntil anyByte (string " : ")
-        |> startWith (string "{|list ")
-        |> try
-
-    (list, _) <-
-        manyUntil anyByte (string " |}")
-        |> try
-
-    (body, _) <- manyUntil node (string "{|endlist|}")
-        |> map
-
-    Sequence {
-        item: unsafeFromUtf8 item,
-        list: unsafeFromUtf8 list,
-        body: body,
-    }
-
 text : Parser Node
 text =
     anyByte
@@ -130,6 +168,18 @@ anyByte = \input ->
     when input is
         [first, .. as rest] -> Match { input: rest, val: first }
         _ -> NoMatch
+
+scalar : U8 -> Parser U8
+scalar = \byte ->
+    \input ->
+        when input is
+            [x, .. as rest] if x == byte -> Match { val: byte, input: rest }
+            _ -> NoMatch
+
+whitespace : Parser (List U8)
+whitespace =
+    oneOf [scalar ' ', scalar '\t', scalar '\n']
+    |> many
 
 # Combinators
 
@@ -169,6 +219,18 @@ manyUntil = \parser, end ->
 
     \input -> help input []
 
+manyBefore : Parser a, Parser b -> Parser (List a)
+manyBefore = \parser, end ->
+    help = \input, items ->
+        when end input is
+            Match _ -> Match { input, val: items }
+            NoMatch ->
+                when parser input is
+                    NoMatch -> NoMatch
+                    Match m -> help m.input (List.append items m.val)
+
+    \input -> help input []
+
 try : Parser a, (a -> Parser b) -> Parser b
 try = \parser, mapper ->
     \input ->
@@ -182,6 +244,12 @@ map = \parser, mapper ->
         when parser in is
             Match { input, val } -> Match { input, val: mapper val }
             NoMatch -> NoMatch
+
+optional = \parser ->
+    \input ->
+        when parser input is
+            NoMatch -> Match { input, val: {} }
+            Match m -> Match { input: m.input, val: {} }
 
 unsafeFromUtf8 = \bytes ->
     when Str.fromUtf8 bytes is
@@ -325,6 +393,44 @@ expect
                 Text "\n<p>Hello ",
                 Interpolation "user",
                 Text "!</p>\n",
+            ],
+        },
+    ]
+
+expect
+    result = parse
+        """
+        {|when x |}
+        {|is Err "foo" |}there was an error
+        {|is Ok "bar" |}we are ok!
+        {|endwhen|}
+        """
+
+    result
+    == [
+        WhenIs {
+            expression: "x",
+            cases: [
+                { pattern: "Err \"foo\"", branch: [Text "there was an error\n"] },
+                { pattern: "Ok \"bar\"", branch: [Text "we are ok!\n"] },
+            ],
+        },
+    ]
+
+expect
+    result = parse
+        """
+        {|when x |}
+        {|is _ |} catch all
+        {|endwhen|}
+        """
+
+    result
+    == [
+        WhenIs {
+            expression: "x",
+            cases: [
+                { pattern: "_", branch: [Text " catch all\n"] },
             ],
         },
     ]
