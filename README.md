@@ -75,6 +75,15 @@ The pattern can be any normal Roc pattern, so things like this are also valid:
 {|endlist|}
 ```
 
+### When-Is
+Use when is expressions like this:
+```
+{|when x |}
+{|is Ok y |} The result was ok!
+{|is Err _ |} The result was an error!
+{|endwhen|}
+```
+
 ### Conditionals
 Conditionally include content like this:
 ```
@@ -95,4 +104,12 @@ Other content
 If it is necessary to insert content into the document without escaping HTML, use triple brackets.
 ```
 {{{ model.dynamicHtml }}}
+```
+
+
+## Tips
+
+You can achieve a pretty decent "hot releoading" experience with a command like this:
+```bash
+fswatch -o . -e ".*" -i "\\.rtl$" | xargs -n1 -I{} sh -c 'lsof -ti tcp:8000 | xargs kill -9 && ../rtl && roc server.roc &'
 ```
