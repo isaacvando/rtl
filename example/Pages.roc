@@ -6,23 +6,60 @@ interface Pages
     imports []
 
 blogPost = \model ->
-    """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-        <title>$(model.post.title |> escapeHtml) - Roc Template Example</title>
-    </head>
-    <body>
-        <div>
-            <h1>$(model.post.title |> escapeHtml)</h1>
-            <p>$(model.post.text |> escapeHtml)</p>
-            <a href="/">Home</a>
-        </div>
-    </body>
-    </html>
-    
-    """
+    [
+        """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+            <title>$(model.post.title |> escapeHtml) - Roc Template Example</title>
+        </head>
+        <body>
+            <div>
+                <h1>$(model.post.title |> escapeHtml)</h1>
+                
+        """,
+        List.map model.post.content \item ->
+            [
+                """
+                
+                            
+                """,
+                when item is
+                    Text t -> 
+                        """
+                         <p>$(t |> escapeHtml)</p>
+                                    
+                        """
+                    Code c -> 
+                        """
+                         <pre>$(c |> escapeHtml)</pre>
+                                    
+                        """
+                    Image i -> 
+                        """
+                         <img src="$(i |> escapeHtml)" width=100>
+                                    
+                        """
+                ,
+                """
+                
+                        
+                """
+            ]
+            |> Str.joinWith ""
+        |> Str.joinWith "",
+        """
+        
+                <br>
+                <a href="/">Home</a>
+            </div>
+        </body>
+        </html>
+        
+        """
+    ]
+    |> Str.joinWith ""
 
 home = \model ->
     [

@@ -28,6 +28,24 @@ main = \req ->
 
         _ -> notFound
 
+posts = [
+    {
+        title: "How to write a template engine in Roc",
+        slug: "template-engine",
+        content: [Text "Roc's type inference shines through here. It makes it easy to write a template language with compile time errors while having the same feel as dynamic languages."],
+    },
+    {
+        title: "My story: thinking of blog ideas for this example",
+        slug: "my-story",
+        content: [Text "What follows is a code block:", Code "[1,2,3] |> List.map \\x -> x * x"],
+    },
+    {
+        title: "The last blog post",
+        slug: "fin",
+        content: [Text "Here's an image", Image "https://www.roc-lang.org/favicon.svg"],
+    },
+]
+
 notFound = Task.ok {
     status: 404,
     headers: [],
@@ -40,21 +58,3 @@ success = \body ->
         headers: [Http.header "Content-Type" "text/html"],
         body: body |> Str.toUtf8,
     }
-
-posts = [
-    {
-        title: "How to write a template engine in Roc",
-        slug: "template-engine",
-        text: "Roc's type inference shines through here. It makes it easy to write a template language with compile time errors while having the same feel as dynamic languages.",
-    },
-    {
-        title: "My story: thinking of blog ideas for this example",
-        slug: "my-story",
-        text: "Just one more after this one...",
-    },
-    {
-        title: "The last blog post",
-        slug: "fin",
-        text: "Three seems like enough for this example",
-    },
-]

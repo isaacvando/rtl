@@ -39,6 +39,7 @@ RenderNode : [
     Text Str,
     Conditional { condition : Str, trueBranch : List RenderNode, falseBranch : List RenderNode },
     Sequence { item : Str, list : Str, body : List RenderNode },
+    WhenIs { expression : Str, cases : List { pattern : Str, branch : List RenderNode } },
 ]
 
 renderTemplate : { name : Str, nodes : List Node } -> Str
@@ -91,6 +92,21 @@ toStr = \node ->
                 $(renderNodes body)
                 |> Str.joinWith ""
                 """
+
+            WhenIs { expression, cases } ->
+                branches =
+                    List.map cases \{ pattern, branch } ->
+                        """
+                        $(pattern) -> 
+                        $(renderNodes branch)
+                        """
+                    |> Str.joinWith "\n"
+                    |> indent
+                """
+                when $(expression) is
+                $(branches)
+
+                """
     indent block
 
 condense : List Node -> List RenderNode
@@ -110,6 +126,13 @@ condense = \nodes ->
                     condition,
                     trueBranch: condense trueBranch,
                     falseBranch: condense falseBranch,
+                }
+
+            WhenIs { expression, cases } ->
+                WhenIs {
+                    expression,
+                    cases: List.map cases \{ pattern, branch } ->
+                        { pattern, branch: condense branch },
                 }
     |> List.walk [] \state, elem ->
         when (state, elem) is

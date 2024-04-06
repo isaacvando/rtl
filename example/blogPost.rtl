@@ -7,7 +7,14 @@
 <body>
     <div>
         <h1>{{ model.post.title }}</h1>
-        <p>{{ model.post.text }}</p>
+        {|list item : model.post.content |}
+            {|when item |}
+            {|is Text t |} <p>{{ t }}</p>
+            {|is Code c |} <pre>{{ c }}</pre>
+            {|is Image i |} <img src="{{i}}" width=100>
+            {|endwhen|}
+        {|endlist|}
+        <br>
         <a href="/">Home</a>
     </div>
 </body>
