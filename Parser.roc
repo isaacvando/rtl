@@ -245,12 +245,6 @@ map = \parser, mapper ->
             Match { input, val } -> Match { input, val: mapper val }
             NoMatch -> NoMatch
 
-optional = \parser ->
-    \input ->
-        when parser input is
-            NoMatch -> Match { input, val: {} }
-            Match m -> Match { input: m.input, val: {} }
-
 unsafeFromUtf8 = \bytes ->
     when Str.fromUtf8 bytes is
         Ok s -> s
@@ -259,34 +253,42 @@ unsafeFromUtf8 = \bytes ->
 
 # Tests
 
+# just text
 expect
     result = parse "foo"
     result == [Text "foo"]
 
+# interpolation in paragraph
 expect
     result = parse "<p>{{name}}</p>"
     result == [Text "<p>", Interpolation "name", Text "</p>"]
 
+# sneaky interpolation
 expect
     result = parse "{{foo}bar}}"
     result == [Interpolation "foo}bar"]
 
+# raw interpolation
 expect
     result = parse "{{{raw val}}}"
     result == [RawInterpolation "raw val"]
 
+# interpolation containing record that looks like raw interpolation
 expect
     result = parse "{{{ foo : 10 } |> \\x -> Num.toStr x.foo}}"
     result == [Interpolation "{ foo : 10 } |> \\x -> Num.toStr x.foo"]
 
+# interpolation with piping
 expect
     result = parse "{{func arg1 arg2 |> func2 arg2}}"
     result == [Interpolation "func arg1 arg2 |> func2 arg2"]
 
+# simple inline conditional
 expect
     result = parse "{|if x > y |}foo{|endif|}"
     result == [Conditional { condition: "x > y", trueBranch: [Text "foo"], falseBranch: [] }]
 
+# conditional
 expect
     result = parse
         """
@@ -296,6 +298,7 @@ expect
         """
     result == [Conditional { condition: "x > y", trueBranch: [Text "\nfoo\n"], falseBranch: [] }]
 
+# if else
 expect
     result = parse
         """
@@ -314,6 +317,7 @@ expect
         },
     ]
 
+# nested conditionals
 expect
     result = parse
         """
@@ -336,6 +340,7 @@ expect
         },
     ]
 
+# interpolation without inner spaces
 expect
     result = parse
         """
@@ -346,6 +351,7 @@ expect
         """
     result == [Text "foo\nbar\n", Interpolation "model.baz", Text "\nfoo"]
 
+# paragraph containing conditional
 expect
     result = parse
         """
@@ -362,6 +368,7 @@ expect
         Text "\n</p>",
     ]
 
+# inline conditional
 expect
     result = parse
         """
@@ -375,6 +382,7 @@ expect
         Text "</div>",
     ]
 
+# list containing paragraph
 expect
     result = parse
         """
@@ -397,6 +405,7 @@ expect
         },
     ]
 
+# when is on result
 expect
     result = parse
         """
@@ -417,6 +426,7 @@ expect
         },
     ]
 
+# when is with single branch
 expect
     result = parse
         """
@@ -432,5 +442,42 @@ expect
             cases: [
                 { pattern: "_", branch: [Text " catch all\n"] },
             ],
+        },
+    ]
+
+# nested when is
+expect
+    result = parse
+        """
+        {|when (foo, bar) |}
+        {|is (1, 2) |}
+            {|when x |}
+            {|is _ |} {{ x }}
+            {|endwhen|}
+        {|is (_, _) |}
+            hello
+        {|endwhen|}
+        """
+    result
+    == [
+        WhenIs {
+            cases: [
+                {
+                    branch: [
+                        Text "\n    ",
+                        WhenIs {
+                            cases: [{ branch: [Text " ", Interpolation "x", Text "\n    "], pattern: "_" }],
+                            expression: "x",
+                        },
+                        Text "\n",
+                    ],
+                    pattern: "(1, 2)",
+                },
+                {
+                    branch: [Text "\n    hello\n"],
+                    pattern: "(_, _)",
+                },
+            ],
+            expression: "(foo, bar)",
         },
     ]
