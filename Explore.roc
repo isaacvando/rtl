@@ -3,19 +3,19 @@ interface Explore
     imports []
 
 parse = \str ->
-    when Str.toUtf8 str |> parser is
+    when Str.toUtf8 str |> parser2 is
         NoMatch -> crash "No match!"
         Match m -> m.val
 
 expect
-    result = parse "foobazbar"
+    result = parse "foobar"
     result == "foobar"
 
-parser =
-    const (\x -> \y -> Str.concat x y)
-    |> keep (string "foo")
-    |> skip (string "baz")
-    |> keep (string "bar")
+# parser1 =
+#     const (\x -> \y -> Str.concat x y)
+#     |> keep (string "foo")
+#     |> skip (string "baz")
+#     |> keep (string "bar")
 
 parser2 =
     const {
@@ -28,7 +28,8 @@ extract = \parser ->
     \input ->
         when parser input is
             NoMatch -> NoMatch
-            Match { input: in, val: { x, y } } -> Match { input: in, val: Str.concat x y }
+            Match { input: in, val: { x, y } } ->
+                Match { input: in, val: Str.concat x y }
 
 string = \str ->
     \input ->
@@ -41,49 +42,48 @@ string = \str ->
 const = \val ->
     \input -> Match { input, val }
 
-keep = \funParser, valParser ->
-    \input ->
-        when funParser input is
-            NoMatch -> NoMatch
-            Match { val: funVal, input: rest } ->
-                when valParser rest is
-                    NoMatch -> NoMatch
-                    Match { val, input: rest2 } ->
-                        Match { val: funVal val, input: rest2 }
+keep = \valParser -> \funParser ->
+        \input ->
+            when funParser input is
+                NoMatch -> NoMatch
+                Match { val: funVal, input: rest } ->
+                    when valParser rest is
+                        NoMatch -> NoMatch
+                        Match { val, input: rest2 } ->
+                            Match { val: funVal val, input: rest2 }
 
-skip = \funParser, skipParser ->
-    \input ->
-        when funParser input is
-            NoMatch -> NoMatch
-            Match { val: funVal, input: rest } ->
-                when skipParser rest is
-                    NoMatch -> NoMatch
-                    Match { val: _, input: rest2 } -> Match { val: funVal, input: rest2 }
+skip = \skipParser -> \funParser ->
+        \input ->
+            when funParser input is
+                NoMatch -> NoMatch
+                Match { val: funVal, input: rest } ->
+                    when skipParser rest is
+                        NoMatch -> NoMatch
+                        Match { val: _, input: rest2 } -> Match { val: funVal, input: rest2 }
 
-ID : U32
+# ID : U32
+# Parser state := (ID, state)
 
-IDCount state := (ID, state)
+# initParser : state -> Parser state
+# initParser = \advanceF ->
+#     @Parser (0, advanceF)
 
-initIDCount : state -> IDCount state
-initIDCount = \advanceF ->
-    @IDCount (0, advanceF)
+# # incID : Parser (ID -> state) -> Parser state
+# incID = \@Parser (currID, advanceF) ->
+#     nextID = currID + 1
 
-incID : IDCount (ID -> state) -> IDCount state
-incID = \@IDCount (currID, advanceF) ->
-    nextID = currID + 1
+#     @Parser (nextID, advanceF nextID)
 
-    @IDCount (nextID, advanceF nextID)
+# extractState : Parser state -> state
+# extractState = \@Parser (_, finalState) -> finalState
 
-extractState : IDCount state -> state
-extractState = \@IDCount (_, finalState) -> finalState
+# expect
+#     { aliceID, bobID, trudyID } =
+#         initParser {
+#             aliceID: <- incID,
+#             bobID: <- incID,
+#             trudyID: <- incID,
+#         }
+#         |> extractState
 
-expect
-    { aliceID, bobID, trudyID } =
-        initIDCount {
-            aliceID: <- incID,
-            bobID: <- incID,
-            trudyID: <- incID,
-        }
-        |> extractState
-
-    aliceID == 1 && bobID == 2 && trudyID == 3
+#     aliceID == 1 && bobID == 2 && trudyID == 3
