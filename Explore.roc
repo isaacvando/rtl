@@ -9,7 +9,7 @@ parse = \str ->
 
 expect
     result = parse "foobar"
-    result == "foobar"
+    result == Conditional { x: "foo", y: "bar" }
 
 # parser1 =
 #     const (\x -> \y -> Str.concat x y)
@@ -22,14 +22,14 @@ parser2 =
         x: <- keep (string "foo"),
         y: <- keep (string "bar"),
     }
-    |> extract
+    |> map Conditional
 
-extract = \parser ->
+map = \parser, func ->
     \input ->
         when parser input is
             NoMatch -> NoMatch
-            Match { input: in, val: { x, y } } ->
-                Match { input: in, val: Str.concat x y }
+            Match { input: in, val } ->
+                Match { input: in, val: func val }
 
 string = \str ->
     \input ->
