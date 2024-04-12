@@ -2,14 +2,21 @@ interface Explore
     exposes []
     imports []
 
-parse = \str ->
-    when Str.toUtf8 str |> parser2 is
+parse = \str, parser ->
+    when Str.toUtf8 str |> parser is
         NoMatch -> crash "No match!"
         Match m -> m.val
 
 expect
-    result = parse "foobar"
+    result = "foobar" |> parse parser2
     result == Conditional { x: "foo", y: "bar" }
+
+expect
+    result = "foofoo" |> parse parser3
+    result == { x: ["foo", "foo"] }
+
+Parser a : List U8 -> [Match { input : List U8, val : a }, NoMatch]
+ApParser val state : Parser (val -> state) -> Parser state
 
 # parser1 =
 #     const (\x -> \y -> Str.concat x y)
@@ -19,10 +26,15 @@ expect
 
 parser2 =
     const {
-        x: <- keep (string "foo"),
-        y: <- keep (string "bar"),
+        x: <- string "foo" |> keep,
+        y: <- string "bar" |> keep,
     }
     |> map Conditional
+
+parser3 =
+    const {
+        x: <- many (string "foo") |> keep,
+    }
 
 map = \parser, func ->
     \input ->
@@ -31,6 +43,10 @@ map = \parser, func ->
             Match { input: in, val } ->
                 Match { input: in, val: func val }
 
+many : Parser a -> Parser (List a)
+# many = \parser ->
+
+string : Str -> Parser Str
 string = \str ->
     \input ->
         bytes = Str.toUtf8 str
@@ -42,6 +58,7 @@ string = \str ->
 const = \val ->
     \input -> Match { input, val }
 
+keep : Parser a -> (Parser (a -> b) -> Parser b)
 keep = \valParser -> \funParser ->
         \input ->
             when funParser input is
@@ -60,30 +77,3 @@ skip = \skipParser -> \funParser ->
                     when skipParser rest is
                         NoMatch -> NoMatch
                         Match { val: _, input: rest2 } -> Match { val: funVal, input: rest2 }
-
-# ID : U32
-# Parser state := (ID, state)
-
-# initParser : state -> Parser state
-# initParser = \advanceF ->
-#     @Parser (0, advanceF)
-
-# # incID : Parser (ID -> state) -> Parser state
-# incID = \@Parser (currID, advanceF) ->
-#     nextID = currID + 1
-
-#     @Parser (nextID, advanceF nextID)
-
-# extractState : Parser state -> state
-# extractState = \@Parser (_, finalState) -> finalState
-
-# expect
-#     { aliceID, bobID, trudyID } =
-#         initParser {
-#             aliceID: <- incID,
-#             bobID: <- incID,
-#             trudyID: <- incID,
-#         }
-#         |> extractState
-
-#     aliceID == 1 && bobID == 2 && trudyID == 3
