@@ -41,9 +41,9 @@ combineTextNodes = \nodes ->
 
             _ -> List.append state elem
 
-Parser a : List U8 -> [Match { input : List U8, val : a }, NoMatch]
-
 # Parsers
+
+Parser a : List U8 -> [Match { input : List U8, val : a }, NoMatch]
 
 node =
     oneOf [
@@ -79,11 +79,7 @@ rawInterpolation =
 
 whenIs : Parser Node
 whenIs =
-    endWithWhitespace = \str ->
-        _ <- string str |> try
-        whitespace
-
-    (expression, _) <- manyUntil anyByte (endWithWhitespace " |}")
+    (expression, _) <- manyUntil anyByte (string " |}" |> endWith whitespace)
         |> startWith (string "{|when ")
         |> try
 
@@ -185,8 +181,13 @@ whitespace =
 
 startWith : Parser a, Parser * -> Parser a
 startWith = \parser, start ->
-    try start \_ ->
-        parser
+    _ <- start |> try
+    parser
+
+endWith : Parser a, Parser * -> Parser a
+endWith = \parser, end ->
+    result <- parser |> try
+    end |> map \_ -> result
 
 oneOf : List (Parser a) -> Parser a
 oneOf = \options ->
@@ -207,6 +208,7 @@ many = \parser ->
 
     \input -> help input []
 
+# Match many occurances of a parser until another parser matches. Return the results of both parsers.
 manyUntil : Parser a, Parser b -> Parser (List a, b)
 manyUntil = \parser, end ->
     help = \input, items ->
@@ -219,6 +221,7 @@ manyUntil = \parser, end ->
 
     \input -> help input []
 
+# Match many occurances of a parser before another parser matches. Do not consume input for the ending parser.
 manyBefore : Parser a, Parser b -> Parser (List a)
 manyBefore = \parser, end ->
     help = \input, items ->
@@ -249,7 +252,7 @@ unsafeFromUtf8 = \bytes ->
     when Str.fromUtf8 bytes is
         Ok s -> s
         Err _ ->
-            crash "I was unable to convert these bytes into a string: $(Inspect.toStr bytes)"
+            crash "There is a bug! I was unable to convert these bytes into a string: $(Inspect.toStr bytes)."
 
 # Tests
 

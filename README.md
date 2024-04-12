@@ -113,3 +113,6 @@ You can achieve a pretty decent "hot releoading" experience with a command like 
 ```bash
 fswatch -o . -e ".*" -i "\\.rtl$" | xargs -n1 -I{} sh -c 'lsof -ti tcp:8000 | xargs kill -9 && ../rtl && roc server.roc &'
 ```
+
+## Todo
+- [ ] Properly handle whitespace around rtl syntax.
