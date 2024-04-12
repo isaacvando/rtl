@@ -56,6 +56,7 @@ blogPost = \model ->
             </div>
         </body>
         </html>
+        
         """
     ]
     |> Str.joinWith ""
