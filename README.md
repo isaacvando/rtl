@@ -17,17 +17,19 @@ First write a template like `hello.rtl`:
 <a href="/signup">Sign up</a>
 {|endif|}
 ```
-Then run `compile.roc` in the directory containing `hello.rtl`. Now call the generated function:
+Then run `rtl` in the directory containing `hello.rtl` to generate `Pages.roc`.
+
+Now you can call the generated function
 ```roc
 Pages.hello {
-        name: "Isaac",
+        name: "World",
         numbers: [1, 2, 3],
         isSubscribed: Bool.true,
     }
 ```
-and get your HTML!
+to generate your HTML!
 ```html
-<p>Hello, Isaac!</p>
+<p>Hello, World!</p>
 
 <ul>
     <li>1</li>
@@ -40,7 +42,7 @@ and get your HTML!
 
 ## Installation
 
-Right now RTL must be built locally to use. For a quick start, run these commands to build RTL and place it in `/usr/local/bin`.
+Right now RTL must be built locally. For a quick start, run these commands to build RTL and place it in `/usr/local/bin`.
 ```bash
 wget https://github.com/isaacvando/rtl/archive/refs/heads/main.zip
 unzip main.zip
@@ -55,7 +57,7 @@ Running `compile.roc` in a directory containg `.rtl` templates generates a file 
 
 RTL supports inserting values, conditionally including content, expanding over lists, and pattern matching with when expressions. These constructs all accept normal Roc expressions so there is no need to learn a different set of primitives.
 
-The generated file, `Pages.roc` becomes a normal part of your Roc project, so you get type checking right out of the box, for free.
+The generated file, `Pages.roc`, becomes a normal part of your Roc project, so you get type checking right out of the box, for free.
 
 ### Inserting Values
 
@@ -114,6 +116,8 @@ If it is necessary to insert content into the document without escaping HTML, us
 ```
 {{{ model.dynamicHtml }}}
 ```
+
+This can be useful for combining multiple templates into one final HTML output.
 
 ## Tips
 
