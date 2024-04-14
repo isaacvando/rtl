@@ -40,11 +40,14 @@ and get your HTML!
 <a href="/subscription">Subscription</a>
 ```
 
+## Installation
 
-## Usage
-Running `compile.roc` in a directory containg `.rtl` (Roc Template Language) templates  will generate a file called `Pages.roc` which will expose a normal roc function for each `.rtl` with the same name. Each function accepts a single argument called `model` which can be any type, but will normally be a record.
+Right now RTL must be built locally to use. For a quick start, [install.sh](/install.sh) will build RTL and place it in `/usr/local/bin`.
 
-roc-template supports inserting values, conditionally including content, and expanding over lists. Interpolations, conditionals, and lists all accept arbitrary single-line Roc expressions, so there is no need to learn a new language outside of the template specific features.
+## How It Works
+Running `compile.roc` in a directory containg `.rtl` templates generates a file called `Pages.roc` which exposes a roc function for each `.rtl` file. Each function accepts a single argument called `model` which can be any type, but will normally be a record.
+
+RTL supports inserting values, conditionally including content, expanding over lists, and pattern matching with when expressions. These constructs all accept normal Roc expressions so there is no need to learn a different set of primitives.
 
 The generated file, `Pages.roc` becomes a normal part of your Roc project, so you get type checking right out of the box, for free.
 
