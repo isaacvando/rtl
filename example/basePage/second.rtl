@@ -1,0 +1,2 @@
+<p>This is a different inner content! Here's another value: {{ Num.toStr model.bar }}</p>
+<a href="/first">first</a>

@@ -1,0 +1,2 @@
+<p>This is the innner content of the page for <em>first</em>. Here's a value: {{ model.foo }} </p>
+<a href="/second">second</a>

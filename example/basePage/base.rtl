@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Shared Base Page</title>
+</head>
+<body>
+    <h1>We want to reuse the outer parts of this page on every page of the website.</h1>
+    {{{ model.content }}}
+
+    <footer>2024 RTL</footer>
+</body>
+</html>
