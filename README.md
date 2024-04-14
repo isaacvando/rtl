@@ -1,7 +1,5 @@
 # Roc Template Language (RTL)
-An HTML template language with compile time validation for Roc.
-
-## Example
+An HTML template language for Roc with compile time validation and tag unions.
 
 First write a template like `hello.rtl`:
 ```
@@ -72,14 +70,14 @@ The value between the brackets must be a `Str`, so conversions may be necessary:
 HTML in the interplated string will be escaped to prevent security issues like XSS.
 
 ### Lists
-Generate a list of values by specifying a pattern for a list element, and the list to be expanded over.
+Generate a list of values by specifying a pattern for a list element and the list to be expanded over.
 ```
 {|list paragraph : model.paragraphs |}
 <p>{{ paragraph }}</p>
 {|endlist|}
 ```
 
-The pattern can be any normal Roc pattern, so things like this are also valid:
+The pattern can be any normal Roc pattern so things like this are also valid:
 ```
 {|list (x,y) : [(1,2),(3,4)] |}
 <p>X: {{ x |> Num.toStr }}, Y: {{ y |> Num.toStr }}</p>
@@ -117,13 +115,13 @@ If it is necessary to insert content into the document without escaping HTML, us
 {{{ model.dynamicHtml }}}
 ```
 
-
 ## Tips
 
 You can achieve a pretty decent "hot releoading" experience with a command like this:
 ```bash
-fswatch -o . -e ".*" -i "\\.rtl$" | xargs -n1 -I{} sh -c 'lsof -ti tcp:8000 | xargs kill -9 && ../rtl && roc server.roc &'
+fswatch -o . -e ".*" -i "\\.rtl$" | xargs -n1 -I{} sh -c 'lsof -ti tcp:8000 | xargs kill -9 && rtl && roc server.roc &'
 ```
 
 ## Todo
-- [ ] Properly handle whitespace around rtl syntax.
+- [ ] Properly handle whitespace around rtl expressions.
+- [ ] Allow RTL expressions to be escaped.
