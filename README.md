@@ -42,7 +42,15 @@ and get your HTML!
 
 ## Installation
 
-Right now RTL must be built locally to use. For a quick start, [install.sh](/install.sh) will build RTL and place it in `/usr/local/bin`.
+Right now RTL must be built locally to use. For a quick start, run these commands to build RTL and place it in `/usr/local/bin`.
+```bash
+wget https://github.com/isaacvando/rtl/archive/refs/heads/main.zip
+unzip main.zip
+roc build rtl-main/rtl.roc --optimize
+sudo mv rtl-main/rtl /usr/local/bin
+rm -r rtl-main main.zip
+rtl --help
+```
 
 ## How It Works
 Running `compile.roc` in a directory containg `.rtl` templates generates a file called `Pages.roc` which exposes a roc function for each `.rtl` file. Each function accepts a single argument called `model` which can be any type, but will normally be a record.
