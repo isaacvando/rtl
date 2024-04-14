@@ -9,35 +9,52 @@ app "rtl"
         pf.Path.{ Path },
         pf.File,
         pf.Dir,
+        pf.Arg,
         Parser,
         CodeGen,
     ]
     provides [main] to pf
 
 main =
-    paths <- Dir.list (Path.fromStr ".")
-        |> Task.onErr \e ->
-            {} <- Stderr.line "Error listing directories: $(Inspect.toStr e)" |> Task.await
-            Task.err 1
-        |> Task.map keepTemplates
-        |> Task.await
+    args <- Arg.list |> Task.await
+    when args is
+        [_, "--help"] | [_, "-h"] ->
+            Stdout.line
+                """
+                Welcome to Roc Template Language (RTL)!
 
-    templates <- taskAll paths \path ->
-            File.readUtf8 path
-            |> Task.map \template ->
-                { path, template }
-        |> Task.onErr \e ->
-            {} <- Stderr.line "There was an error reading the templates: $(Inspect.toStr e)" |> Task.await
-            Task.err 1
-        |> Task.await
+                In a directory containing .rtl files, run `rtl` to generate Pages.roc.
 
-    {} <- File.writeUtf8 (Path.fromStr "Pages.roc") (compile templates)
-        |> Task.onErr \e ->
-            {} <- Stderr.line "Error writing file: $(Inspect.toStr e)" |> Task.await
-            Task.err 1
-        |> Task.await
+                Get the latest version at https://github.com/isaacvando/rtl
+                """
 
-    Stdout.line "Generated Pages.roc"
+        _ ->
+            paths <- Dir.list (Path.fromStr ".")
+                |> Task.onErr \e ->
+                    {} <- Stderr.line "Error listing directories: $(Inspect.toStr e)" |> Task.await
+                    Task.err 1
+                |> Task.map keepTemplates
+                |> Task.await
+
+            templates <- taskAll paths \path ->
+                    File.readUtf8 path
+                    |> Task.map \template ->
+                        { path, template }
+                |> Task.onErr \e ->
+                    {} <- Stderr.line "There was an error reading the templates: $(Inspect.toStr e)" |> Task.await
+                    Task.err 1
+                |> Task.await
+
+            if List.isEmpty templates then
+                Stdout.line "No .rtl templates found in the current directory"
+            else
+                {} <- File.writeUtf8 (Path.fromStr "Pages.roc") (compile templates)
+                    |> Task.onErr \e ->
+                        {} <- Stderr.line "Error writing file: $(Inspect.toStr e)" |> Task.await
+                        Task.err 1
+                    |> Task.await
+
+                Stdout.line "Generated Pages.roc"
 
 keepTemplates : List Path -> List Path
 keepTemplates = \paths ->
