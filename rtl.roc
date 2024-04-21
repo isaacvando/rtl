@@ -16,8 +16,7 @@ app "rtl"
     provides [main] to pf
 
 main =
-    args <- Arg.list |> Task.await
-    when args is
+    when Arg.list! is
         [_, "--help"] | [_, "-h"] ->
             Stdout.line
                 """
@@ -29,12 +28,12 @@ main =
                 """
 
         _ ->
-            paths <- Dir.list (Path.fromStr ".")
-                |> Task.onErr \e ->
-                    {} <- Stderr.line "Error listing directories: $(Inspect.toStr e)" |> Task.await
-                    Task.err 1
-                |> Task.map keepTemplates
-                |> Task.await
+            paths =
+                Dir.list! (Path.fromStr ".")
+                    |> Task.onErr \e ->
+                        Stderr.line! "Error listing directories: $(Inspect.toStr e)"
+                        Task.err 1
+                    |> Task.map keepTemplates
 
             invalidTemplateNames =
                 List.map paths \p ->
@@ -43,31 +42,29 @@ main =
                 |> List.dropIf isValidFunctionName
 
             if !(List.isEmpty invalidTemplateNames) then
-                {} <- Stderr.line
-                        """
-                        The following templates have invalid names: $(invalidTemplateNames |> Str.joinWith ", ")
-                        Each template must start with a lowercase letter and only contain letters and numbers.
-                        """
-                    |> Task.await
+                Stderr.line!
+                    """
+                    The following templates have invalid names: $(invalidTemplateNames |> Str.joinWith ", ")
+                    Each template must start with a lowercase letter and only contain letters and numbers.
+                    """
                 Task.err 1
             else
-                templates <- taskAll paths \path ->
+                templates =
+                    taskAll! paths \path ->
                         File.readUtf8 path
                         |> Task.map \template ->
                             { path, template }
-                    |> Task.onErr \e ->
-                        {} <- Stderr.line "There was an error reading the templates: $(Inspect.toStr e)" |> Task.await
-                        Task.err 1
-                    |> Task.await
+                        |> Task.onErr \e ->
+                            Stderr.line! "There was an error reading the templates: $(Inspect.toStr e)"
+                            Task.err 1
 
                 if List.isEmpty templates then
                     Stdout.line "No .rtl templates found in the current directory"
                 else
-                    {} <- File.writeUtf8 (Path.fromStr "Pages.roc") (compile templates)
+                    File.writeUtf8! (Path.fromStr "Pages.roc") (compile templates)
                         |> Task.onErr \e ->
-                            {} <- Stderr.line "Error writing file: $(Inspect.toStr e)" |> Task.await
+                            Stderr.line! "Error writing file: $(Inspect.toStr e)"
                             Task.err 1
-                        |> Task.await
 
                     Stdout.line "Generated Pages.roc"
 
