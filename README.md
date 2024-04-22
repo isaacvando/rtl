@@ -53,7 +53,7 @@ rtl --help
 ```
 
 ## How It Works
-Running `compile.roc` in a directory containg `.rtl` templates generates a file called `Pages.roc` which exposes a roc function for each `.rtl` file. Each function accepts a single argument called `model` which can be any type, but will normally be a record.
+Running `rtl` in a directory containing `.rtl` templates generates a file called `Pages.roc` which exposes a roc function for each `.rtl` file. Each function accepts a single argument called `model` which can be any type, but will normally be a record.
 
 RTL supports inserting values, conditionally including content, expanding over lists, and pattern matching with when expressions. These constructs all accept normal Roc expressions so there is no need to learn a different set of primitives.
 
@@ -69,7 +69,7 @@ The value between the brackets must be a `Str`, so conversions may be necessary:
 ```
 {{ 2 |> Num.toStr }}
 ```
-HTML in the interplated string will be escaped to prevent security issues like XSS.
+HTML in the interpolated string will be escaped to prevent security issues like XSS.
 
 ### Lists
 Generate a list of values by specifying a pattern for a list element and the list to be expanded over.
@@ -121,7 +121,7 @@ This can be useful for combining multiple templates into one final HTML output.
 
 ## Tips
 
-You can achieve a pretty decent "hot releoading" experience with a command like this:
+You can achieve a pretty decent "hot reloading" experience with a command like this:
 ```bash
 fswatch -o . -e ".*" -i "\\.rtl$" | xargs -n1 -I{} sh -c 'lsof -ti tcp:8000 | xargs kill -9 && rtl && roc server.roc &'
 ```
@@ -129,3 +129,7 @@ fswatch -o . -e ".*" -i "\\.rtl$" | xargs -n1 -I{} sh -c 'lsof -ti tcp:8000 | xa
 ## Todo
 - [ ] Properly handle whitespace around rtl expressions.
 - [ ] Allow RTL expressions to be escaped.
+- [ ] Look into real hot code reloading.
+- [ ] Potentially update the generated code to use buffer passing style to avoid unnecessary copies.
+- [ ] Benchmark runtime performance against other template languages.
+- [ ] Potentially add error messages for incomplete directives.
