@@ -88,7 +88,7 @@ The pattern can be any normal Roc pattern so things like this are also valid:
 
 ### When-Is
 Use when is expressions like this:
-```html
+```
 {|when x |}
     {|is Ok y |} The result was ok!
     {|is Err _ |} The result was an error!
@@ -97,13 +97,13 @@ Use when is expressions like this:
 
 ### Conditionals
 Conditionally include content like this:
-```html
+```
 {|if model.x < model.y |}
     Conditional content here
 {|endif|}
 ```
 Or with an else block:
-```html
+```
 {|if model.x < model.y |}
     Conditional content here
 {|else|}
