@@ -1,20 +1,20 @@
 # Roc Template Language (RTL)
-An HTML template language for Roc with compile time validation and tag unions.
+A template language for Roc with compile time validation and tag unions. RTL can be used with HTML or any other textual content type.
 
 First write a template like `hello.rtl`:
-```
+```html
 <p>Hello, {{model.name}}!</p>
 
 <ul>
-{|list number : model.numbers |}
-    <li>{{Num.toStr number}}</li>
-{|endlist|}
+    {|list number : model.numbers |}
+        <li>{{Num.toStr number}}</li>
+    {|endlist|}
 </ul>
 
 {|if model.isSubscribed |}
-<a href="/subscription">Subscription</a>
+    <a href="/subscription">Subscription</a>
 {|else|}
-<a href="/signup">Sign up</a>
+    <a href="/signup">Sign up</a>
 {|endif|}
 ```
 Then run `rtl` in the directory containing `hello.rtl` to generate `Pages.roc`.
@@ -73,51 +73,51 @@ HTML in the interpolated string will be escaped to prevent security issues like 
 
 ### Lists
 Generate a list of values by specifying a pattern for a list element and the list to be expanded over.
-```
+```html
 {|list paragraph : model.paragraphs |}
-<p>{{ paragraph }}</p>
+    <p>{{ paragraph }}</p>
 {|endlist|}
 ```
 
 The pattern can be any normal Roc pattern so things like this are also valid:
-```
+```html
 {|list (x,y) : [(1,2),(3,4)] |}
-<p>X: {{ x |> Num.toStr }}, Y: {{ y |> Num.toStr }}</p>
+    <p>X: {{ x |> Num.toStr }}, Y: {{ y |> Num.toStr }}</p>
 {|endlist|}
 ```
 
 ### When-Is
 Use when is expressions like this:
-```
+```html
 {|when x |}
-{|is Ok y |} The result was ok!
-{|is Err _ |} The result was an error!
+    {|is Ok y |} The result was ok!
+    {|is Err _ |} The result was an error!
 {|endwhen|}
 ```
 
 ### Conditionals
 Conditionally include content like this:
-```
+```html
 {|if model.x < model.y |}
-Conditional content here
+    Conditional content here
 {|endif|}
 ```
 Or with an else block:
-```
+```html
 {|if model.x < model.y |}
-Conditional content here
+    Conditional content here
 {|else|}
-Other content
+    Other content
 {|endif|}
 ```
 
 ### Raw Interpolation
-If it is necessary to insert content into the document without escaping HTML, use triple brackets.
+If it is necessary to insert content without escaping HTML, use triple brackets.
 ```
 {{{ model.dynamicHtml }}}
 ```
 
-This can be useful for combining multiple templates into one final HTML output.
+This is useful for generating content types other than HTML or combining multiple templates into one final HTML output.
 
 ## Tips
 
@@ -127,7 +127,7 @@ fswatch -o . -e ".*" -i "\\.rtl$" | xargs -n1 -I{} sh -c 'lsof -ti tcp:8000 | xa
 ```
 
 ## Todo
-- [ ] Properly handle whitespace around rtl expressions.
+- [ ] Allow more control for whitespace around RTL directives.
 - [ ] Allow RTL expressions to be escaped.
 - [ ] Look into real hot code reloading.
 - [ ] Potentially update the generated code to use buffer passing style to avoid unnecessary copies.
