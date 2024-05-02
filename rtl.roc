@@ -1,10 +1,9 @@
 app "rtl"
     packages {
-        pf: "https://github.com/roc-lang/basic-cli/releases/download/0.8.1/x8URkvfyi9I0QhmVG98roKBUs_AZRkLFwFJVJ3942YA.tar.br",
+        pf: "https://github.com/roc-lang/basic-cli/releases/download/0.10.0/vNe6s9hWzoTZtFmNkvEICPErI9ptji_ySjicO6CkucY.tar.br",
     }
     imports [
         pf.Stdout,
-        pf.Stderr,
         pf.Task.{ Task },
         pf.Path.{ Path },
         pf.File,
@@ -30,9 +29,8 @@ main =
         _ ->
             paths =
                 Dir.list! (Path.fromStr ".")
-                    |> Task.onErr \e ->
-                        Stderr.line! "Error listing directories: $(Inspect.toStr e)"
-                        Task.err 1
+                    |> Task.mapErr \e ->
+                        Exit 1 "Error listing directories: $(Inspect.toStr e)"
                     |> Task.map keepTemplates
 
             invalidTemplateNames =
@@ -42,29 +40,28 @@ main =
                 |> List.dropIf isValidFunctionName
 
             if !(List.isEmpty invalidTemplateNames) then
-                Stderr.line!
+                Exit
+                    1
                     """
                     The following templates have invalid names: $(invalidTemplateNames |> Str.joinWith ", ")
                     Each template must start with a lowercase letter and only contain letters and numbers.
                     """
-                Task.err 1
+                |> Task.err
             else
                 templates =
                     taskAll! paths \path ->
                         File.readUtf8 path
                         |> Task.map \template ->
                             { path, template }
-                        |> Task.onErr \e ->
-                            Stderr.line! "There was an error reading the templates: $(Inspect.toStr e)"
-                            Task.err 1
+                        |> Task.mapErr \e ->
+                            Exit 1 "There was an error reading the templates: $(Inspect.toStr e)"
 
                 if List.isEmpty templates then
                     Stdout.line "No .rtl templates found in the current directory"
                 else
                     File.writeUtf8! (Path.fromStr "Pages.roc") (compile templates)
-                        |> Task.onErr \e ->
-                            Stderr.line! "Error writing file: $(Inspect.toStr e)"
-                            Task.err 1
+                        |> Task.mapErr \e ->
+                            Exit 1 "Error writing file: $(Inspect.toStr e)"
 
                     Stdout.line "Generated Pages.roc"
 
