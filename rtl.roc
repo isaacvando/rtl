@@ -8,6 +8,7 @@ import pf.Path exposing [Path]
 import pf.File
 import pf.Dir
 import pf.Arg
+import pf.Cmd
 import Parser
 import CodeGen
 
@@ -23,44 +24,57 @@ main =
                 Get the latest version at https://github.com/isaacvando/rtl
                 """
 
-        _ ->
-            paths =
-                Dir.list! (Path.fromStr ".")
-                    |> Task.mapErr \e ->
-                        Exit 1 "Error listing directories: $(Inspect.toStr e)"
-                    |> Task.map keepTemplates
+        _ -> generate
 
-            invalidTemplateNames =
-                List.map paths \p ->
-                    getFileName p
-                    |> Str.replaceLast extension ""
-                |> List.dropIf isValidFunctionName
+generate =
+    paths =
+        Dir.list! (Path.fromStr ".")
+            |> Task.mapErr \e ->
+                Exit 1 "Error listing directories: $(Inspect.toStr e)"
+            |> Task.map keepTemplates
 
-            if !(List.isEmpty invalidTemplateNames) then
-                Exit
-                    1
-                    """
-                    The following templates have invalid names: $(invalidTemplateNames |> Str.joinWith ", ")
-                    Each template must start with a lowercase letter and only contain letters and numbers.
-                    """
-                |> Task.err
-            else
-                templates =
-                    taskAll! paths \path ->
-                        File.readUtf8 path
-                        |> Task.map \template ->
-                            { path, template }
-                        |> Task.mapErr \e ->
-                            Exit 1 "There was an error reading the templates: $(Inspect.toStr e)"
+    invalidTemplateNames =
+        List.map paths \p ->
+            getFileName p
+            |> Str.replaceLast extension ""
+        |> List.dropIf isValidFunctionName
 
-                if List.isEmpty templates then
-                    Stdout.line "No .rtl templates found in the current directory"
-                else
-                    File.writeUtf8! (Path.fromStr "Pages.roc") (compile templates)
-                        |> Task.mapErr \e ->
-                            Exit 1 "Error writing file: $(Inspect.toStr e)"
+    if !(List.isEmpty invalidTemplateNames) then
+        Exit
+            1
+            """
+            The following templates have invalid names: $(invalidTemplateNames |> Str.joinWith ", ")
+            Each template must start with a lowercase letter and only contain letters and numbers.
+            """
+        |> Task.err
+    else
+        templates =
+            taskAll! paths \path ->
+                File.readUtf8 path
+                |> Task.map \template ->
+                    { path, template }
+                |> Task.mapErr \e ->
+                    Exit 1 "There was an error reading the templates: $(Inspect.toStr e)"
 
-                    Stdout.line "Generated Pages.roc"
+        if List.isEmpty templates then
+            Stdout.line "No .rtl templates found in the current directory"
+        else
+            File.writeUtf8! (Path.fromStr "Pages.roc") (compile templates)
+                |> Task.mapErr \e ->
+                    Exit 1 "Error writing file: $(Inspect.toStr e)"
+
+            Stdout.line! "Generated Pages.roc"
+            rocCheck!
+
+rocCheck = 
+    Cmd.new "roc"
+    |> Cmd.args ["check", "Pages.roc"]
+    |> Cmd.status
+    |> Task.onErr \CmdError err -> 
+        when err is
+            ExitCode code -> Task.err (Exit code "")
+            _ -> Task.err (Exit 1 "")
+
 
 keepTemplates : List Path -> List Path
 keepTemplates = \paths ->
