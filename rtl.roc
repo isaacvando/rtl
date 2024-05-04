@@ -1,18 +1,15 @@
-app "rtl"
-    packages {
-        pf: "https://github.com/roc-lang/basic-cli/releases/download/0.10.0/vNe6s9hWzoTZtFmNkvEICPErI9ptji_ySjicO6CkucY.tar.br",
-    }
-    imports [
-        pf.Stdout,
-        pf.Task.{ Task },
-        pf.Path.{ Path },
-        pf.File,
-        pf.Dir,
-        pf.Arg,
-        Parser,
-        CodeGen,
-    ]
-    provides [main] to pf
+app [main] {
+    pf: platform "https://github.com/roc-lang/basic-cli/releases/download/0.10.0/vNe6s9hWzoTZtFmNkvEICPErI9ptji_ySjicO6CkucY.tar.br",
+}
+
+import pf.Stdout
+import pf.Task exposing [Task]
+import pf.Path exposing [Path]
+import pf.File
+import pf.Dir
+import pf.Arg
+import Parser
+import CodeGen
 
 main =
     when Arg.list! is

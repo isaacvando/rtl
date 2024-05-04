@@ -1,6 +1,6 @@
-interface CodeGen
-    exposes [generate]
-    imports [Parser.{ Node }]
+module [generate]
+
+import Parser exposing [Node]
 
 generate : List { name : Str, nodes : List Node } -> Str
 generate = \templates ->

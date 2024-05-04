@@ -1,6 +1,4 @@
-interface Parser
-    exposes [parse, Node]
-    imports []
+module [parse, Node]
 
 Node : [
     Text Str,
