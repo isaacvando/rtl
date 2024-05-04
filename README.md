@@ -127,9 +127,9 @@ fswatch -o . -e ".*" -i "\\.rtl$" | xargs -n1 -I{} sh -c 'lsof -ti tcp:8000 | xa
 ```
 
 ## Todo
-- [ ] Allow more control for whitespace around RTL directives.
-- [ ] Allow RTL expressions to be escaped.
+- [ ] Allow more control for whitespace around RTL tags.
+- [ ] Allow RTL tags to be escaped.
 - [ ] Look into real hot code reloading.
 - [ ] Potentially update the generated code to use buffer passing style to avoid unnecessary copies.
 - [ ] Benchmark runtime performance against other template languages.
-- [ ] Potentially add error messages for incomplete directives.
+- [ ] Potentially add error messages for incomplete tags.
