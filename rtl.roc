@@ -1,14 +1,14 @@
 app [main] {
-    pf: platform "https://github.com/roc-lang/basic-cli/releases/download/0.10.0/vNe6s9hWzoTZtFmNkvEICPErI9ptji_ySjicO6CkucY.tar.br",
+    cli: platform "https://github.com/roc-lang/basic-cli/releases/download/0.10.0/vNe6s9hWzoTZtFmNkvEICPErI9ptji_ySjicO6CkucY.tar.br",
 }
 
-import pf.Stdout
-import pf.Task exposing [Task]
-import pf.Path exposing [Path]
-import pf.File
-import pf.Dir
-import pf.Arg
-import pf.Cmd
+import cli.Stdout
+import cli.Task exposing [Task]
+import cli.Path exposing [Path]
+import cli.File
+import cli.Dir
+import cli.Arg
+import cli.Cmd
 import Parser
 import CodeGen
 
@@ -62,19 +62,17 @@ generate =
             File.writeUtf8! (Path.fromStr "Pages.roc") (compile templates)
                 |> Task.mapErr \e ->
                     Exit 1 "Error writing file: $(Inspect.toStr e)"
-
             Stdout.line! "Generated Pages.roc"
             rocCheck!
 
-rocCheck = 
+rocCheck =
     Cmd.new "roc"
     |> Cmd.args ["check", "Pages.roc"]
     |> Cmd.status
-    |> Task.onErr \CmdError err -> 
+    |> Task.onErr \CmdError err ->
         when err is
             ExitCode code -> Task.err (Exit code "")
             _ -> Task.err (Exit 1 "")
-
 
 keepTemplates : List Path -> List Path
 keepTemplates = \paths ->
