@@ -9,6 +9,7 @@ import cli.File
 import cli.Dir
 import cli.Arg
 import cli.Cmd
+import cli.Utc
 import Parser
 import CodeGen
 
@@ -27,6 +28,7 @@ main =
         _ -> generate
 
 generate =
+    start = Utc.now!
     paths =
         Dir.list! (Path.fromStr ".")
             |> Task.mapErr \e ->
@@ -62,7 +64,9 @@ generate =
             File.writeUtf8! (Path.fromStr "Pages.roc") (compile templates)
                 |> Task.mapErr \e ->
                     Exit 1 "Error writing file: $(Inspect.toStr e)"
-            Stdout.line! "Generated Pages.roc"
+            end = Utc.now!
+            time = Utc.toMillisSinceEpoch end - Utc.toMillisSinceEpoch start
+            Stdout.line! "Generated Pages.roc in $(time |> Num.toStr)ms"
             rocCheck!
 
 rocCheck =
