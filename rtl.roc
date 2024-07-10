@@ -1,44 +1,64 @@
 app [main] {
-    cli: platform "https://github.com/roc-lang/basic-cli/releases/download/0.10.0/vNe6s9hWzoTZtFmNkvEICPErI9ptji_ySjicO6CkucY.tar.br",
+    cli: platform "https://github.com/roc-lang/basic-cli/releases/download/0.12.0/Lb8EgiejTUzbggO2HVVuPJFkwvvsfW6LojkLR20kTVE.tar.br",
 }
 
 import cli.Stdout
 import cli.Task exposing [Task]
-import cli.Path exposing [Path]
 import cli.File
+import cli.Path exposing [Path]
 import cli.Dir
 import cli.Arg
 import cli.Cmd
 import cli.Utc
 import Parser
 import CodeGen
+import cli.Arg
+import cli.Arg.Opt as Opt
+import cli.Arg.Cli as Cli
 
 main =
-    when Arg.list! is
-        [_, "--help"] | [_, "-h"] ->
-            Stdout.line
+    cliParser =
+        Cli.build {
+            maybeExt: <- Opt.maybeStr { short: "e", long: "ext", help: "Extension of template files -- default is .rtl" },
+            maybePath: <- Opt.maybeStr { short: "p", long: "path", help: "Path templates -- default is current directory ./"},
+        }
+        |> Cli.finish {
+            name: "rtl",
+            version: "0.2.0",
+            authors: ["Isaac Van Doren <https://github.com/isaacvando>"],
+            description:
                 """
                 Welcome to Roc Template Language (RTL)!
 
-                In a directory containing .rtl files, run `rtl` to generate Pages.roc.
+                In a directory containing template files, run `rtl` to generate Pages.roc.
 
                 Get the latest version at https://github.com/isaacvando/rtl
-                """
+                """,
+        }
+        |> Cli.assertValid
 
-        _ -> generate
+    when Cli.parseOrDisplayMessage cliParser (Arg.list! {}) is
+        Ok args -> generate args
+        Err errMsg -> Task.err (Exit 1 errMsg)
 
-generate =
+generate : { maybeExt : Result Str err, maybePath : Result Str err} -> Task {} _
+generate = \{ maybeExt, maybePath } ->
+
+    templateExt = maybeExt |> Result.withDefault ".rtl"
+    searchDir = maybePath |> Result.withDefault "."
+
     start = Utc.now!
+
+    info! "Searching for templates in $(searchDir) with extension $(templateExt) ..."
     paths =
-        Dir.list! (Path.fromStr ".")
-            |> Task.mapErr \e ->
-                Exit 1 "Error listing directories: $(Inspect.toStr e)"
-            |> Task.map keepTemplates
+        Dir.list searchDir
+            |> Task.map \path -> keepTemplates path templateExt
+            |> Task.mapErr! \e -> Exit 1 "Error listing directories: $(Inspect.toStr e)"
 
     invalidTemplateNames =
         List.map paths \p ->
             getFileName p
-            |> Str.replaceLast extension ""
+            |> Str.replaceLast templateExt ""
         |> List.dropIf isValidFunctionName
 
     if !(List.isEmpty invalidTemplateNames) then
@@ -50,58 +70,66 @@ generate =
             """
         |> Task.err
     else
+
+        info! "Reading templates..."
+
         templates =
             taskAll! paths \path ->
                 File.readUtf8 path
-                |> Task.map \template ->
-                    { path, template }
-                |> Task.mapErr \e ->
-                    Exit 1 "There was an error reading the templates: $(Inspect.toStr e)"
+                |> Task.map \template -> { path, template }
+                |> Task.mapErr \e -> Exit 1 "There was an error reading the templates: $(Inspect.toStr e)"
 
         if List.isEmpty templates then
-            Stdout.line "No .rtl templates found in the current directory"
+            Stdout.line "No templates found in the current directory"
         else
-            File.writeUtf8! (Path.fromStr "Pages.roc") (compile templates)
-                |> Task.mapErr \e ->
-                    Exit 1 "Error writing file: $(Inspect.toStr e)"
-            end = Utc.now!
-            time = Utc.toMillisSinceEpoch end - Utc.toMillisSinceEpoch start
-            Stdout.line! "Generated Pages.roc in $(time |> Num.toStr)ms"
-            rocCheck!
 
-rocCheck =
+            filePath = "$(searchDir)/Pages.roc"
+
+            info! "Compiling templates..."
+            File.writeUtf8 filePath (compile templates templateExt)
+                |> Task.mapErr! \e -> Exit 1 "Error writing file: $(Inspect.toStr e)"
+
+            end = Utc.now!
+
+            time = Utc.toMillisSinceEpoch end - Utc.toMillisSinceEpoch start
+            info! "Generated $(filePath) in $(time |> Num.toStr)ms"
+
+            rocCheck! filePath
+
+rocCheck : Str -> Task {} _
+rocCheck = \filePath ->
+
+    info! "Checking generates $(filePath) for syntax errors..."
+
     Cmd.new "roc"
-    |> Cmd.args ["check", "Pages.roc"]
+    |> Cmd.args ["check", filePath]
     |> Cmd.status
     |> Task.onErr \CmdError err ->
         when err is
             ExitCode code -> Task.err (Exit code "")
             _ -> Task.err (Exit 1 "")
 
-keepTemplates : List Path -> List Path
-keepTemplates = \paths ->
-    List.keepIf paths \p ->
-        Path.display p
-        |> Str.endsWith extension
+keepTemplates : List Path, Str -> List Str
+keepTemplates = \paths, templateExt ->
+    paths
+    |> List.map Path.display
+    |> List.keepIf \str -> Str.endsWith str templateExt
 
-compile : List { path : Path, template : Str } -> Str
-compile = \templates ->
+compile : List { path : Str, template : Str }, Str -> Str
+compile = \templates, templateExt ->
     templates
     |> List.map \{ path, template } ->
         name =
             getFileName path
-            |> Str.replaceLast extension ""
+            |> Str.replaceLast templateExt ""
         { name, nodes: Parser.parse template }
     |> CodeGen.generate
 
-getFileName : Path -> Str
+getFileName : Str -> Str
 getFileName = \path ->
-    display = Path.display path
-    when Str.split display "/" is
+    when Str.split path "/" is
         [.., filename] -> filename
         _ -> crash "This is a bug! This case should not happen."
-
-extension = ".rtl"
 
 taskAll : List a, (a -> Task b err) -> Task (List b) err
 taskAll = \items, task ->
@@ -133,3 +161,7 @@ isAlphaNumeric = \c ->
     (48 <= c && c <= 57)
     || (65 <= c && c <= 90)
     || (97 <= c && c <= 122)
+
+info : Str -> Task {} _
+info = \msg ->
+    Stdout.line! "\u(001b)[34mINFO:\u(001b)[0m $(msg)"
