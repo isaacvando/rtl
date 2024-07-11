@@ -12,7 +12,6 @@ generate = \templates ->
     names =
         templates
         |> List.map \template -> "    $(template.name),"
-        |> List.append "    escapeHtml,"
         |> Str.joinWith "\n"
 
     """
@@ -32,8 +31,6 @@ generate = \templates ->
         |> Str.replaceEach "\\"" "&quot;"
         |> Str.replaceEach "'" "&#39;"
     """
-
-# \""
 
 RenderNode : [
     Text Str,

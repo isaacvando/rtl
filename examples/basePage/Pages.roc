@@ -3,7 +3,6 @@ module [
     first,
     base,
     second,
-    escapeHtml,
     ]
 
 first = \model ->
