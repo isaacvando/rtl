@@ -19,7 +19,7 @@ import cli.Arg.Cli as Cli
 main =
     cliParser =
         Cli.build {
-            maybePath: <- Opt.maybeStr { short: "p", long: "path", help: "Path templates -- default is current directory ./" },
+            maybeInputDir: <- Opt.maybeStr { short: "i", long: "input-directory", help: "The directory containing the templates to be compiled" },
         }
         |> Cli.finish {
             name: "rtl",
@@ -42,15 +42,15 @@ main =
 
 extension = ".rtl"
 
-generate : { maybePath : Result Str err } -> Task {} _
-generate = \{ maybePath } ->
+generate : { maybeInputDir : Result Str err } -> Task {} _
+generate = \{ maybeInputDir } ->
 
-    searchDir = maybePath |> Result.withDefault "."
+    inputDir = maybeInputDir |> Result.withDefault "."
 
     start = Utc.now!
-    info! "Searching for templates in $(searchDir) ..."
+    info! "Searching for templates in $(inputDir) ..."
     paths =
-        Dir.list searchDir
+        Dir.list inputDir
             |> Task.map keepTemplates
             |> Task.mapErr! \e -> Exit 1 "Error listing directories: $(Inspect.toStr e)"
 
@@ -80,7 +80,7 @@ generate = \{ maybePath } ->
         if List.isEmpty templates then
             Stdout.line "No templates found in the current directory"
         else
-            filePath = "$(searchDir)/Pages.roc"
+            filePath = "$(inputDir)/Pages.roc"
             info! "Compiling templates..."
             File.writeUtf8 filePath (compile templates)
                 |> Task.mapErr! \e -> Exit 1 "Error writing file: $(Inspect.toStr e)"
