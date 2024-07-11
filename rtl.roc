@@ -19,21 +19,20 @@ import cli.Arg.Cli as Cli
 main =
     cliParser =
         Cli.build {
-            maybeExt: <- Opt.maybeStr { short: "e", long: "ext", help: "Extension of template files -- default is .rtl" },
-            maybePath: <- Opt.maybeStr { short: "p", long: "path", help: "Path templates -- default is current directory ./"},
+            maybePath: <- Opt.maybeStr { short: "p", long: "path", help: "Path templates -- default is current directory ./" },
         }
         |> Cli.finish {
             name: "rtl",
             version: "0.2.0",
             authors: ["Isaac Van Doren <https://github.com/isaacvando>"],
             description:
-                """
-                Welcome to Roc Template Language (RTL)!
+            """
+            Welcome to Roc Template Language (RTL)!
 
-                In a directory containing template files, run `rtl` to generate Pages.roc.
+            In a directory containing template files, run `rtl` to generate Pages.roc.
 
-                Get the latest version at https://github.com/isaacvando/rtl
-                """,
+            Get the latest version at https://github.com/isaacvando/rtl
+            """,
         }
         |> Cli.assertValid
 
@@ -41,24 +40,24 @@ main =
         Ok args -> generate args
         Err errMsg -> Task.err (Exit 1 errMsg)
 
-generate : { maybeExt : Result Str err, maybePath : Result Str err} -> Task {} _
-generate = \{ maybeExt, maybePath } ->
+extension = ".rtl"
 
-    templateExt = maybeExt |> Result.withDefault ".rtl"
+generate : { maybePath : Result Str err } -> Task {} _
+generate = \{ maybePath } ->
+
     searchDir = maybePath |> Result.withDefault "."
 
     start = Utc.now!
-
-    info! "Searching for templates in $(searchDir) with extension $(templateExt) ..."
+    info! "Searching for templates in $(searchDir) ..."
     paths =
         Dir.list searchDir
-            |> Task.map \path -> keepTemplates path templateExt
+            |> Task.map keepTemplates
             |> Task.mapErr! \e -> Exit 1 "Error listing directories: $(Inspect.toStr e)"
 
     invalidTemplateNames =
         List.map paths \p ->
             getFileName p
-            |> Str.replaceLast templateExt ""
+            |> Str.replaceLast extension ""
         |> List.dropIf isValidFunctionName
 
     if !(List.isEmpty invalidTemplateNames) then
@@ -70,7 +69,6 @@ generate = \{ maybeExt, maybePath } ->
             """
         |> Task.err
     else
-
         info! "Reading templates..."
 
         templates =
@@ -82,11 +80,9 @@ generate = \{ maybeExt, maybePath } ->
         if List.isEmpty templates then
             Stdout.line "No templates found in the current directory"
         else
-
             filePath = "$(searchDir)/Pages.roc"
-
             info! "Compiling templates..."
-            File.writeUtf8 filePath (compile templates templateExt)
+            File.writeUtf8 filePath (compile templates)
                 |> Task.mapErr! \e -> Exit 1 "Error writing file: $(Inspect.toStr e)"
 
             end = Utc.now!
@@ -109,19 +105,19 @@ rocCheck = \filePath ->
             ExitCode code -> Task.err (Exit code "")
             _ -> Task.err (Exit 1 "")
 
-keepTemplates : List Path, Str -> List Str
-keepTemplates = \paths, templateExt ->
+keepTemplates : List Path -> List Str
+keepTemplates = \paths ->
     paths
     |> List.map Path.display
-    |> List.keepIf \str -> Str.endsWith str templateExt
+    |> List.keepIf \str -> Str.endsWith str extension
 
-compile : List { path : Str, template : Str }, Str -> Str
-compile = \templates, templateExt ->
+compile : List { path : Str, template : Str } -> Str
+compile = \templates ->
     templates
     |> List.map \{ path, template } ->
         name =
             getFileName path
-            |> Str.replaceLast templateExt ""
+            |> Str.replaceLast extension ""
         { name, nodes: Parser.parse template }
     |> CodeGen.generate
 
