@@ -30,9 +30,9 @@ main =
             """
             Welcome to Roc Template Language (RTL)!
 
-            In a directory containing template files, run `rtl` to generate Pages.roc.
+            In a directory containing template files, run `rtl` to generate Pages.roc. Then import Pages to use your templates.
 
-            Get the latest version at https://github.com/isaacvando/rtl
+            Get the latest version at https://github.com/isaacvando/rtl.
             """,
         }
         |> Cli.assertValid
@@ -50,11 +50,11 @@ generate = \args ->
     outputDir = args.maybeOutputDir |> Result.withDefault "."
 
     start = Utc.now!
-    info! "Searching for templates in $(inputDir) ..."
+    info! "Searching for templates in $(inputDir)"
     paths =
         Dir.list inputDir
             |> Task.map keepTemplates
-            |> Task.mapErr! \e -> Exit 1 "Error listing directories: $(Inspect.toStr e)"
+            |> Task.mapErr! \e -> error "Could not list directories: $(Inspect.toStr e)"
 
     invalidTemplateNames =
         List.map paths \p ->
@@ -63,29 +63,28 @@ generate = \args ->
         |> List.dropIf isValidFunctionName
 
     if !(List.isEmpty invalidTemplateNames) then
-        Exit
-            1
+        error
             """
             The following templates have invalid names: $(invalidTemplateNames |> Str.joinWith ", ")
             Each template must start with a lowercase letter and only contain letters and numbers.
             """
         |> Task.err
     else
-        info! "Reading templates..."
+        info! "Reading templates"
 
         templates =
             taskAll! paths \path ->
                 File.readUtf8 path
                 |> Task.map \template -> { path, template }
-                |> Task.mapErr \e -> Exit 1 "There was an error reading the templates: $(Inspect.toStr e)"
+                |> Task.mapErr \e -> error "Could not read the templates: $(Inspect.toStr e)"
 
         if List.isEmpty templates then
-            Stdout.line "No templates found in the current directory"
+            info! "No templates found in the current directory"
         else
             filePath = "$(outputDir)/Pages.roc"
-            info! "Compiling templates..."
+            info! "Compiling templates"
             File.writeUtf8 filePath (compile templates)
-                |> Task.mapErr! \e -> Exit 1 "Error writing file: $(Inspect.toStr e)"
+                |> Task.mapErr! \e -> error "Could not write file: $(Inspect.toStr e)"
 
             end = Utc.now!
 
@@ -96,8 +95,7 @@ generate = \args ->
 
 rocCheck : Str -> Task {} _
 rocCheck = \filePath ->
-
-    info! "Checking generates $(filePath) for syntax errors..."
+    info! "Running `roc check` on $(filePath)"
 
     Cmd.new "roc"
     |> Cmd.args ["check", filePath]
@@ -163,3 +161,7 @@ isAlphaNumeric = \c ->
 info : Str -> Task {} _
 info = \msg ->
     Stdout.line! "\u(001b)[34mINFO:\u(001b)[0m $(msg)"
+
+error : Str -> [Exit (Num *) Str]
+error = \msg ->
+    Exit 1 "\u(001b)[31mERROR:\u(001b)[0m $(msg)"
