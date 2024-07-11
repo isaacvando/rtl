@@ -19,7 +19,8 @@ import cli.Arg.Cli as Cli
 main =
     cliParser =
         Cli.build {
-            maybeInputDir: <- Opt.maybeStr { short: "i", long: "input-directory", help: "The directory containing the templates to be compiled" },
+            maybeInputDir: <- Opt.maybeStr { short: "i", long: "input-directory", help: "The directory containing the templates to be compiled. Defaults to the current directory." },
+            maybeOutputDir: <- Opt.maybeStr { short: "o", long: "output-directory", help: "The directory Pages.roc will be written to. Defaults to the current directory." },
         }
         |> Cli.finish {
             name: "rtl",
@@ -42,10 +43,11 @@ main =
 
 extension = ".rtl"
 
-generate : { maybeInputDir : Result Str err } -> Task {} _
-generate = \{ maybeInputDir } ->
+generate : { maybeInputDir : Result Str *, maybeOutputDir : Result Str * } -> Task {} _
+generate = \args ->
 
-    inputDir = maybeInputDir |> Result.withDefault "."
+    inputDir = args.maybeInputDir |> Result.withDefault "."
+    outputDir = args.maybeOutputDir |> Result.withDefault "."
 
     start = Utc.now!
     info! "Searching for templates in $(inputDir) ..."
@@ -80,7 +82,7 @@ generate = \{ maybeInputDir } ->
         if List.isEmpty templates then
             Stdout.line "No templates found in the current directory"
         else
-            filePath = "$(inputDir)/Pages.roc"
+            filePath = "$(outputDir)/Pages.roc"
             info! "Compiling templates..."
             File.writeUtf8 filePath (compile templates)
                 |> Task.mapErr! \e -> Exit 1 "Error writing file: $(Inspect.toStr e)"
