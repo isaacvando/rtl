@@ -142,31 +142,30 @@ conditional =
         falseBranch,
     }
 
-# text : Bool -> Parser Node
-text = \checkForTags ->
-    textUntilTagStart =
-        chompWhile \bytes ->
-            List.startsWith bytes ['{', '{'] || List.startsWith bytes ['{', '|']
-        |> map \bytes ->
-            unsafeFromUtf8 bytes |> Text
+text : Bool -> Parser Node
+text = \checkForTags -> \input ->
+        when input is
+            [] -> NoMatch
+            ['{', '{', ..] | ['{', '|', ..] if checkForTags -> NoMatch
+            _ ->
+                (consumed, remaining) = splitWhen input \bytes ->
+                    List.startsWith bytes ['{', '{']
+                    || List.startsWith bytes ['{', '|']
+                Match {
+                    input: remaining,
+                    val: unsafeFromUtf8 consumed |> Text,
+                }
 
-    if checkForTags then
-        textUntilTagStart
-        |> startWith (not (oneOf [string "{{", string "{|"]))
-    else
-        textUntilTagStart
-
-# takeUntil : List a, (List a -> Bool) -> List a
-# takeUntil = \items, pred ->
-#    help
-
-# chompWhile : (List U8 -> Bool) -> Parser (List U8)
-chompWhile = \pred -> \input ->
-        help = \acc, in ->
-            when in is
-                [first, .. as rest] if pred in -> help (List.append acc first) rest
-                _ -> Match { input: in, val: acc }
-        help [] input
+splitWhen : List U8, (List U8 -> Bool) -> (List U8, List U8)
+splitWhen = \bytes, pred ->
+    help = \acc, remaining ->
+        if pred remaining then
+            (acc, remaining)
+        else
+            when remaining is
+                [] -> (acc, remaining)
+                [first, .. as rest] -> help (List.append acc first) rest
+    help [] bytes
 
 string : Str -> Parser Str
 string = \str ->
@@ -265,13 +264,6 @@ map = \parser, mapper ->
         when parser in is
             Match { input, val } -> Match { input, val: mapper val }
             NoMatch -> NoMatch
-
-# not : Parser a -> Parser {}
-not = \parser ->
-    \input ->
-        when parser input is
-            Match _ -> NoMatch
-            NoMatch -> Match { input, val: {} }
 
 unsafeFromUtf8 = \bytes ->
     when Str.fromUtf8 bytes is
