@@ -70,8 +70,6 @@ generate = \args ->
             """
         |> Task.err
     else
-        info! "Reading templates"
-
         templates =
             taskAll! paths \path ->
                 File.readUtf8 path
@@ -79,7 +77,7 @@ generate = \args ->
                 |> Task.mapErr \e -> error "Could not read the templates: $(Inspect.toStr e)"
 
         if List.isEmpty templates then
-            info! "No templates found in the current directory"
+            info! "No templates found"
         else
             filePath = "$(outputDir)/Pages.roc"
             info! "Compiling templates"

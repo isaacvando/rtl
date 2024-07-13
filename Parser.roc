@@ -45,12 +45,13 @@ Parser a : List U8 -> [Match { input : List U8, val : a }, NoMatch]
 
 node =
     oneOf [
+        text Bool.false,
         rawInterpolation,
         interpolation,
         sequence,
         whenIs,
         conditional,
-        text,
+        text Bool.true,
     ]
 
 interpolation : Parser Node
@@ -141,12 +142,38 @@ conditional =
         falseBranch,
     }
 
-text : Parser Node
-text =
-    anyByte
-    |> map \byte ->
-        unsafeFromUtf8 [byte]
-        |> Text
+text : Bool -> Parser Node
+text = \allowTags -> \input ->
+        startsWithTags = \bytes ->
+            List.startsWith bytes ['{', '{'] || List.startsWith bytes ['{', '|']
+        inputStartsWithTags = startsWithTags input
+        if !allowTags && inputStartsWithTags then
+            NoMatch
+        else if inputStartsWithTags then
+            { before, others } = List.split input 2
+            (consumed, remaining) = splitWhen others startsWithTags
+
+            Match {
+                input: remaining,
+                val: List.concat before consumed |> unsafeFromUtf8 |> Text,
+            }
+        else
+            (consumed, remaining) = splitWhen input startsWithTags
+
+            Match {
+                input: remaining,
+                val: unsafeFromUtf8 consumed |> Text,
+            }
+
+splitWhen : List U8, (List U8 -> Bool) -> (List U8, List U8)
+splitWhen = \bytes, pred ->
+    help = \acc, remaining ->
+        when remaining is
+            [first, .. as rest] if !(pred remaining) ->
+                help (List.append acc first) rest
+
+            _ -> (acc, remaining)
+    help [] bytes
 
 string : Str -> Parser Str
 string = \str ->
@@ -193,9 +220,12 @@ oneOf = \options ->
         [] -> \_ -> NoMatch
         [first, .. as rest] ->
             \input ->
-                when first input is
-                    Match m -> Match m
-                    NoMatch -> (oneOf rest) input
+                if List.isEmpty input then
+                    NoMatch
+                else
+                    when first input is
+                        Match m -> Match m
+                        NoMatch -> (oneOf rest) input
 
 many : Parser a -> Parser (List a)
 many = \parser ->
@@ -482,3 +512,34 @@ expect
             expression: "(foo, bar)",
         },
     ]
+
+# parses unicode characters correctly be
+expect
+    result = parse
+        """
+        中文繁體{{model.foo "🐱"}}🙂‍↕️🥝
+        {|if "🥝" == "🥝" |}foo{|endif|}
+        """
+
+    result
+    == [
+        Text "中文繁體",
+        Interpolation
+            """
+            model.foo "🐱"
+            """,
+        Text "🙂‍↕️🥝\n",
+        Conditional {
+            condition:
+            """
+            "🥝" == "🥝"
+            """,
+            trueBranch: [Text "foo"],
+            falseBranch: [],
+        },
+    ]
+
+# unclosed tags are parsed as Text
+expect
+    result = parse "{|if Bool.true |}{|list model.cities |}"
+    result == [Text "{|if Bool.true |}{|list model.cities |}"]
