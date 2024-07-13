@@ -45,13 +45,13 @@ Parser a : List U8 -> [Match { input : List U8, val : a }, NoMatch]
 
 node =
     oneOf [
-        textWithoutTags,
+        text Bool.false,
         rawInterpolation,
         interpolation,
         sequence,
         whenIs,
         conditional,
-        textWithTags,
+        text Bool.true,
     ]
 
 interpolation : Parser Node
@@ -142,37 +142,28 @@ conditional =
         falseBranch,
     }
 
-textWithoutTags = \input ->
-    startsWithTags = \bytes ->
-        List.startsWith bytes ['{', '{'] || List.startsWith bytes ['{', '|']
-    if startsWithTags input then
-        NoMatch
-    else
-        (consumed, remaining) = splitWhen input startsWithTags
+text : Bool -> Parser Node
+text = \allowTags -> \input ->
+        startsWithTags = \bytes ->
+            List.startsWith bytes ['{', '{'] || List.startsWith bytes ['{', '|']
+        inputStartsWithTags = startsWithTags input
+        if !allowTags && inputStartsWithTags then
+            NoMatch
+        else if inputStartsWithTags then
+            { before, others } = List.split input 2
+            (consumed, remaining) = splitWhen others startsWithTags
 
-        Match {
-            input: remaining,
-            val: unsafeFromUtf8 consumed |> Text,
-        }
+            Match {
+                input: remaining,
+                val: List.concat before consumed |> unsafeFromUtf8 |> Text,
+            }
+        else
+            (consumed, remaining) = splitWhen input startsWithTags
 
-textWithTags = \input ->
-    startsWithTags = \bytes ->
-        List.startsWith bytes ['{', '{'] || List.startsWith bytes ['{', '|']
-    if startsWithTags input then
-        { before, others } = List.split input 2
-        (consumed, remaining) = splitWhen others startsWithTags
-
-        Match {
-            input: remaining,
-            val: List.concat before consumed |> unsafeFromUtf8 |> Text,
-        }
-    else
-        (consumed, remaining) = splitWhen input startsWithTags
-
-        Match {
-            input: remaining,
-            val: unsafeFromUtf8 consumed |> Text,
-        }
+            Match {
+                input: remaining,
+                val: unsafeFromUtf8 consumed |> Text,
+            }
 
 splitWhen : List U8, (List U8 -> Bool) -> (List U8, List U8)
 splitWhen = \bytes, pred ->
