@@ -1,25 +1,32 @@
 # Roc Template Language (RTL)
+
 A template language for Roc with compile time validation and tag unions. RTL can be used with HTML or any other textual content type.
 
+> [!WARNING]
+> Right now RTL uses basic-cli 0.12.0 which is in prerelease. If you can't build RTL locally, it might be because the URL changed and we haven't yet updated it here.
+
 First write a template like `hello.rtl`:
+
 ```html
 <p>Hello, {{model.name}}!</p>
 
 <ul>
-    {|list number : model.numbers |}
-        <li>{{Num.toStr number}}</li>
-    {|endlist|}
+  {|list number : model.numbers |}
+  <li>{{Num.toStr number}}</li>
+  {|endlist|}
 </ul>
 
 {|if model.isSubscribed |}
-    <a href="/subscription">Subscription</a>
+<a href="/subscription">Subscription</a>
 {|else|}
-    <a href="/signup">Sign up</a>
+<a href="/signup">Sign up</a>
 {|endif|}
 ```
+
 Then run `rtl` in the directory containing `hello.rtl` to generate `Pages.roc`.
 
 Now you can call the generated function
+
 ```roc
 Pages.hello {
         name: "World",
@@ -27,14 +34,16 @@ Pages.hello {
         isSubscribed: Bool.true,
     }
 ```
+
 to generate your HTML!
+
 ```html
 <p>Hello, World!</p>
 
 <ul>
-    <li>1</li>
-    <li>2</li>
-    <li>3</li>
+  <li>1</li>
+  <li>2</li>
+  <li>3</li>
 </ul>
 
 <a href="/subscription">Subscription</a>
@@ -43,6 +52,7 @@ to generate your HTML!
 ## Installation
 
 Right now RTL must be built locally. For a quick start, run these commands to build RTL and place it in `/usr/local/bin`.
+
 ```bash
 wget https://github.com/isaacvando/rtl/archive/refs/heads/main.zip
 unzip main.zip
@@ -53,6 +63,7 @@ rtl --help
 ```
 
 ## How It Works
+
 Running `rtl` in a directory containing `.rtl` templates generates a file called `Pages.roc` which exposes a roc function for each `.rtl` file. Each function accepts a single argument called `model` which can be any type, but will normally be a record.
 
 RTL supports inserting values, conditionally including content, expanding over lists, and pattern matching with when expressions. These constructs all accept normal Roc expressions so there is no need to learn a different set of primitives.
@@ -62,32 +73,41 @@ The generated file, `Pages.roc`, becomes a normal part of your Roc project, so y
 ### Inserting Values
 
 To interpolate a value into the document, use double curly brackets:
+
 ```
 {{ model.firstName }}
 ```
+
 The value between the brackets must be a `Str`, so conversions may be necessary:
+
 ```
 {{ 2 |> Num.toStr }}
 ```
+
 HTML in the interpolated string will be escaped to prevent security issues like XSS.
 
 ### Lists
+
 Generate a list of values by specifying a pattern for a list element and the list to be expanded over.
+
 ```html
 {|list paragraph : model.paragraphs |}
-    <p>{{ paragraph }}</p>
+<p>{{ paragraph }}</p>
 {|endlist|}
 ```
 
 The pattern can be any normal Roc pattern so things like this are also valid:
+
 ```html
 {|list (x,y) : [(1,2),(3,4)] |}
-    <p>X: {{ x |> Num.toStr }}, Y: {{ y |> Num.toStr }}</p>
+<p>X: {{ x |> Num.toStr }}, Y: {{ y |> Num.toStr }}</p>
 {|endlist|}
 ```
 
 ### When-Is
+
 Use when is expressions like this:
+
 ```
 {|when x |}
     {|is Ok y |} The result was ok!
@@ -96,13 +116,17 @@ Use when is expressions like this:
 ```
 
 ### Conditionals
+
 Conditionally include content like this:
+
 ```
 {|if model.x < model.y |}
     Conditional content here
 {|endif|}
 ```
+
 Or with an else block:
+
 ```
 {|if model.x < model.y |}
     Conditional content here
@@ -112,7 +136,9 @@ Or with an else block:
 ```
 
 ### Raw Interpolation
+
 If it is necessary to insert content without escaping HTML, use triple brackets.
+
 ```
 {{{ model.dynamicHtml }}}
 ```
@@ -121,12 +147,26 @@ This is useful for generating content types other than HTML or combining multipl
 
 ## Tips
 
+### Hot Reloading
+
 You can achieve a pretty decent "hot reloading" experience with a command like this:
+
 ```bash
 fswatch -o . -e ".*" -i "\\.rtl$" | xargs -n1 -I{} sh -c 'lsof -ti tcp:8000 | xargs kill -9 && rtl && roc server.roc &'
 ```
 
+### Syntax Highlighting
+
+If you want to get the syntax highlighting for the ambient content type in all of your `.rtl` files in VS Code, you can create a file association like this in `settings.json`:
+
+```json
+"files.associations": {
+  "*.rtl": "html"
+}
+```
+
 ## Todo
+
 - [ ] Allow more control for whitespace around RTL tags.
 - [ ] Allow RTL tags to be escaped.
 - [ ] Look into real hot code reloading.

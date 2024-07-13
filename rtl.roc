@@ -1,39 +1,60 @@
 app [main] {
-    cli: platform "https://github.com/roc-lang/basic-cli/releases/download/0.10.0/vNe6s9hWzoTZtFmNkvEICPErI9ptji_ySjicO6CkucY.tar.br",
+    cli: platform "https://github.com/roc-lang/basic-cli/releases/download/0.12.0/Lb8EgiejTUzbggO2HVVuPJFkwvvsfW6LojkLR20kTVE.tar.br",
 }
 
 import cli.Stdout
 import cli.Task exposing [Task]
-import cli.Path exposing [Path]
 import cli.File
+import cli.Path exposing [Path]
 import cli.Dir
 import cli.Arg
 import cli.Cmd
 import cli.Utc
 import Parser
 import CodeGen
+import cli.Arg
+import cli.Arg.Opt as Opt
+import cli.Arg.Cli as Cli
 
 main =
-    when Arg.list! is
-        [_, "--help"] | [_, "-h"] ->
-            Stdout.line
-                """
-                Welcome to Roc Template Language (RTL)!
+    cliParser =
+        Cli.build {
+            maybeInputDir: <- Opt.maybeStr { short: "i", long: "input-directory", help: "The directory containing the templates to be compiled. Defaults to the current directory." },
+            maybeOutputDir: <- Opt.maybeStr { short: "o", long: "output-directory", help: "The directory Pages.roc will be written to. Defaults to the current directory." },
+        }
+        |> Cli.finish {
+            name: "rtl",
+            version: "0.2.0",
+            authors: ["Isaac Van Doren <https://github.com/isaacvando>"],
+            description:
+            """
+            Welcome to Roc Template Language (RTL)!
 
-                In a directory containing .rtl files, run `rtl` to generate Pages.roc.
+            In a directory containing template files, run `rtl` to generate Pages.roc. Then import Pages to use your templates.
 
-                Get the latest version at https://github.com/isaacvando/rtl
-                """
+            Get the latest version at https://github.com/isaacvando/rtl.
+            """,
+        }
+        |> Cli.assertValid
 
-        _ -> generate
+    when Cli.parseOrDisplayMessage cliParser (Arg.list! {}) is
+        Ok args -> generate args
+        Err errMsg -> Task.err (Exit 1 errMsg)
 
-generate =
+extension = ".rtl"
+
+generate : { maybeInputDir : Result Str *, maybeOutputDir : Result Str * } -> Task {} _
+generate = \args ->
+
+    inputDir = args.maybeInputDir |> Result.withDefault "."
+    outputDir = args.maybeOutputDir |> Result.withDefault "."
+
     start = Utc.now!
+    info! "Searching for templates in $(inputDir)"
     paths =
-        Dir.list! (Path.fromStr ".")
-            |> Task.mapErr \e ->
-                Exit 1 "Error listing directories: $(Inspect.toStr e)"
+        Dir.list inputDir
             |> Task.map keepTemplates
+            |> Task.mapErr! \e -> error "Could not list directories: $(Inspect.toStr e)"
 
     invalidTemplateNames =
         List.map paths \p ->
@@ -42,49 +63,55 @@ generate =
         |> List.dropIf isValidFunctionName
 
     if !(List.isEmpty invalidTemplateNames) then
-        Exit
-            1
+        error
             """
             The following templates have invalid names: $(invalidTemplateNames |> Str.joinWith ", ")
             Each template must start with a lowercase letter and only contain letters and numbers.
             """
         |> Task.err
     else
+        info! "Reading templates"
+
         templates =
             taskAll! paths \path ->
                 File.readUtf8 path
-                |> Task.map \template ->
-                    { path, template }
-                |> Task.mapErr \e ->
-                    Exit 1 "There was an error reading the templates: $(Inspect.toStr e)"
+                |> Task.map \template -> { path, template }
+                |> Task.mapErr \e -> error "Could not read the templates: $(Inspect.toStr e)"
 
         if List.isEmpty templates then
-            Stdout.line "No .rtl templates found in the current directory"
+            info! "No templates found in the current directory"
         else
-            File.writeUtf8! (Path.fromStr "Pages.roc") (compile templates)
-                |> Task.mapErr \e ->
-                    Exit 1 "Error writing file: $(Inspect.toStr e)"
-            end = Utc.now!
-            time = Utc.toMillisSinceEpoch end - Utc.toMillisSinceEpoch start
-            Stdout.line! "Generated Pages.roc in $(time |> Num.toStr)ms"
-            rocCheck!
+            filePath = "$(outputDir)/Pages.roc"
+            info! "Compiling templates"
+            File.writeUtf8 filePath (compile templates)
+                |> Task.mapErr! \e -> error "Could not write file: $(Inspect.toStr e)"
 
-rocCheck =
+            end = Utc.now!
+
+            time = Utc.toMillisSinceEpoch end - Utc.toMillisSinceEpoch start
+            info! "Generated $(filePath) in $(time |> Num.toStr)ms"
+
+            rocCheck! filePath
+
+rocCheck : Str -> Task {} _
+rocCheck = \filePath ->
+    info! "Running `roc check` on $(filePath)"
+
     Cmd.new "roc"
-    |> Cmd.args ["check", "Pages.roc"]
+    |> Cmd.args ["check", filePath]
     |> Cmd.status
     |> Task.onErr \CmdError err ->
         when err is
             ExitCode code -> Task.err (Exit code "")
             _ -> Task.err (Exit 1 "")
 
-keepTemplates : List Path -> List Path
+keepTemplates : List Path -> List Str
 keepTemplates = \paths ->
-    List.keepIf paths \p ->
-        Path.display p
-        |> Str.endsWith extension
+    paths
+    |> List.map Path.display
+    |> List.keepIf \str -> Str.endsWith str extension
 
-compile : List { path : Path, template : Str } -> Str
+compile : List { path : Str, template : Str } -> Str
 compile = \templates ->
     templates
     |> List.map \{ path, template } ->
@@ -94,14 +121,11 @@ compile = \templates ->
         { name, nodes: Parser.parse template }
     |> CodeGen.generate
 
-getFileName : Path -> Str
+getFileName : Str -> Str
 getFileName = \path ->
-    display = Path.display path
-    when Str.split display "/" is
+    when Str.split path "/" is
         [.., filename] -> filename
         _ -> crash "This is a bug! This case should not happen."
-
-extension = ".rtl"
 
 taskAll : List a, (a -> Task b err) -> Task (List b) err
 taskAll = \items, task ->
@@ -133,3 +157,11 @@ isAlphaNumeric = \c ->
     (48 <= c && c <= 57)
     || (65 <= c && c <= 90)
     || (97 <= c && c <= 122)
+
+info : Str -> Task {} _
+info = \msg ->
+    Stdout.line! "\u(001b)[34mINFO:\u(001b)[0m $(msg)"
+
+error : Str -> [Exit (Num *) Str]
+error = \msg ->
+    Exit 1 "\u(001b)[31mERROR:\u(001b)[0m $(msg)"

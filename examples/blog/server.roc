@@ -1,17 +1,14 @@
-app "server"
-    packages { pf: "https://github.com/roc-lang/basic-webserver/releases/download/0.3.0/gJOTXTeR3CD4zCbRqK7olo4edxQvW5u3xGL-8SSxDcY.tar.br" }
-    imports [
-        pf.Task.{ Task },
-        pf.Http.{ Request, Response },
-        Pages,
-    ]
-    provides [main] to pf
+app [main] { pf: platform "https://github.com/roc-lang/basic-webserver/releases/download/0.5.0/Vq-iXfrRf-aHxhJpAh71uoVUlC-rsWvmjzTYOJKhu4M.tar.br" }
+
+import pf.Task exposing [Task]
+import pf.Http
+import Pages
 
 main = \req ->
     when Str.split req.url "/" |> List.dropFirst 1 is
         ["posts", slug] ->
-            maybePost = List.findFirst posts \post ->
-                post.slug == slug
+            maybePost = posts |> List.findFirst \post -> post.slug == slug
+
             when maybePost is
                 Err _ -> notFound
                 Ok post ->
@@ -21,10 +18,7 @@ main = \req ->
                     |> success
 
         [""] ->
-            Pages.home {
-                posts,
-            }
-            |> success
+            Pages.home { posts } |> success
 
         _ -> notFound
 
