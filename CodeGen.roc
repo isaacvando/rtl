@@ -58,8 +58,10 @@ renderTemplate = \{ name, nodes } ->
         condense nodes
         |> renderNodes
 
+    # We check if the model was used in the template so that we can ignore the parameter
+    # if it was not used to prevent an unused field warning from showing up.
     """
-    $(name) = \\model ->
+    $(name) = \\$(if isModelUsedInList nodes then "" else "_")model ->
     $(body)
     """
 
@@ -151,6 +153,29 @@ condense = \nodes ->
                 rest |> List.append combined
 
             _ -> List.append state elem
+
+isModelUsedInList = \nodes ->
+    List.any nodes isModelUsedInNode
+
+# We can't determine with full certainty if the model was used without parsing the Roc code that
+# is used on the template, which we don't do. This is a heuristic that just checks if any of the spots
+# that could reference the model contain "model". So a string literal that contains "model" could create
+# a false positive, but this isn't a big deal.
+isModelUsedInNode = \node ->
+    containsModel = \str ->
+        Str.contains str "model"
+    when node is
+        Interpolation i | RawInterpolation i -> containsModel i
+        Conditional { condition, trueBranch, falseBranch } ->
+            containsModel condition || isModelUsedInList trueBranch || isModelUsedInList falseBranch
+
+        Sequence { list, body } -> containsModel list || isModelUsedInList body
+        WhenIs { expression, cases } ->
+            containsModel expression
+            || List.any cases \case ->
+                isModelUsedInList case.branch
+
+        Text _ -> Bool.false
 
 indent : Str -> Str
 indent = \input ->
