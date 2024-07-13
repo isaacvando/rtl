@@ -45,13 +45,13 @@ Parser a : List U8 -> [Match { input : List U8, val : a }, NoMatch]
 
 node =
     oneOf [
-        text Bool.true,
+        textWithoutTags,
         rawInterpolation,
         interpolation,
         sequence,
         whenIs,
         conditional,
-        text Bool.false,
+        textWithTags,
     ]
 
 interpolation : Parser Node
@@ -142,18 +142,37 @@ conditional =
         falseBranch,
     }
 
-text : Bool -> Parser Node
-text = \checkForTags -> \input ->
-        startsWithTags = \bytes ->
-            List.startsWith bytes ['{', '{'] || List.startsWith bytes ['{', '|']
-        if (checkForTags && startsWithTags input) || List.isEmpty input then
-            NoMatch
-        else
-            (consumed, remaining) = splitWhen input startsWithTags
-            Match {
-                input: remaining,
-                val: unsafeFromUtf8 consumed |> Text,
-            }
+textWithoutTags = \input ->
+    startsWithTags = \bytes ->
+        List.startsWith bytes ['{', '{'] || List.startsWith bytes ['{', '|']
+    if startsWithTags input then
+        NoMatch
+    else
+        (consumed, remaining) = splitWhen input startsWithTags
+
+        Match {
+            input: remaining,
+            val: unsafeFromUtf8 consumed |> Text,
+        }
+
+textWithTags = \input ->
+    startsWithTags = \bytes ->
+        List.startsWith bytes ['{', '{'] || List.startsWith bytes ['{', '|']
+    if startsWithTags input then
+        { before, others } = List.split input 2
+        (consumed, remaining) = splitWhen others startsWithTags
+
+        Match {
+            input: remaining,
+            val: List.concat before consumed |> unsafeFromUtf8 |> Text,
+        }
+    else
+        (consumed, remaining) = splitWhen input startsWithTags
+
+        Match {
+            input: remaining,
+            val: unsafeFromUtf8 consumed |> Text,
+        }
 
 splitWhen : List U8, (List U8 -> Bool) -> (List U8, List U8)
 splitWhen = \bytes, pred ->
@@ -210,9 +229,12 @@ oneOf = \options ->
         [] -> \_ -> NoMatch
         [first, .. as rest] ->
             \input ->
-                when first input is
-                    Match m -> Match m
-                    NoMatch -> (oneOf rest) input
+                if List.isEmpty input then
+                    NoMatch
+                else
+                    when first input is
+                        Match m -> Match m
+                        NoMatch -> (oneOf rest) input
 
 many : Parser a -> Parser (List a)
 many = \parser ->
@@ -525,3 +547,8 @@ expect
             falseBranch: [],
         },
     ]
+
+# unclosed tags are parsed as Text
+expect
+    result = parse "{|if Bool.true |}{|list model.cities |}"
+    result == [Text "{|if Bool.true |}{|list model.cities |}"]
