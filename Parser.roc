@@ -144,27 +144,25 @@ conditional =
 
 text : Bool -> Parser Node
 text = \checkForTags -> \input ->
-        when input is
-            [] -> NoMatch
-            ['{', '{', ..] | ['{', '|', ..] if checkForTags -> NoMatch
-            _ ->
-                (consumed, remaining) = splitWhen input \bytes ->
-                    List.startsWith bytes ['{', '{']
-                    || List.startsWith bytes ['{', '|']
-                Match {
-                    input: remaining,
-                    val: unsafeFromUtf8 consumed |> Text,
-                }
+        startsWithTags = \bytes ->
+            List.startsWith bytes ['{', '{'] || List.startsWith bytes ['{', '|']
+        if (checkForTags && startsWithTags input) || List.isEmpty input then
+            NoMatch
+        else
+            (consumed, remaining) = splitWhen input startsWithTags
+            Match {
+                input: remaining,
+                val: unsafeFromUtf8 consumed |> Text,
+            }
 
 splitWhen : List U8, (List U8 -> Bool) -> (List U8, List U8)
 splitWhen = \bytes, pred ->
     help = \acc, remaining ->
-        if pred remaining then
-            (acc, remaining)
-        else
-            when remaining is
-                [] -> (acc, remaining)
-                [first, .. as rest] -> help (List.append acc first) rest
+        when remaining is
+            [first, .. as rest] if !(pred remaining) ->
+                help (List.append acc first) rest
+
+            _ -> (acc, remaining)
     help [] bytes
 
 string : Str -> Parser Str
@@ -502,13 +500,28 @@ expect
         },
     ]
 
-# parses unicode characters correctly
+# parses unicode characters correctly be
 expect
-    result = parse "中文繁體{{model.foo}}🙂‍↕️🥝"
+    result = parse
+        """
+        中文繁體{{model.foo "🐱"}}🙂‍↕️🥝
+        {|if "🥝" == "🥝" |}foo{|endif|}
+        """
 
     result
     == [
         Text "中文繁體",
-        Interpolation "model.foo",
-        Text "🙂‍↕️🥝",
+        Interpolation
+            """
+            model.foo "🐱"
+            """,
+        Text "🙂‍↕️🥝\n",
+        Conditional {
+            condition:
+            """
+            "🥝" == "🥝"
+            """,
+            trueBranch: [Text "foo"],
+            falseBranch: [],
+        },
     ]
