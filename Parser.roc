@@ -45,12 +45,13 @@ Parser a : List U8 -> [Match { input : List U8, val : a }, NoMatch]
 
 node =
     oneOf [
+        text Bool.true,
         rawInterpolation,
         interpolation,
         sequence,
         whenIs,
         conditional,
-        text,
+        text Bool.false,
     ]
 
 interpolation : Parser Node
@@ -141,12 +142,31 @@ conditional =
         falseBranch,
     }
 
-text : Parser Node
-text =
-    anyByte
-    |> map \byte ->
-        unsafeFromUtf8 [byte]
-        |> Text
+# text : Bool -> Parser Node
+text = \checkForTags ->
+    textUntilTagStart =
+        chompWhile \bytes ->
+            List.startsWith bytes ['{', '{'] || List.startsWith bytes ['{', '|']
+        |> map \bytes ->
+            unsafeFromUtf8 bytes |> Text
+
+    if checkForTags then
+        textUntilTagStart
+        |> startWith (not (oneOf [string "{{", string "{|"]))
+    else
+        textUntilTagStart
+
+# takeUntil : List a, (List a -> Bool) -> List a
+# takeUntil = \items, pred ->
+#    help
+
+# chompWhile : (List U8 -> Bool) -> Parser (List U8)
+chompWhile = \pred -> \input ->
+        help = \acc, in ->
+            when in is
+                [first, .. as rest] if pred in -> help (List.append acc first) rest
+                _ -> Match { input: in, val: acc }
+        help [] input
 
 string : Str -> Parser Str
 string = \str ->
@@ -245,6 +265,13 @@ map = \parser, mapper ->
         when parser in is
             Match { input, val } -> Match { input, val: mapper val }
             NoMatch -> NoMatch
+
+# not : Parser a -> Parser {}
+not = \parser ->
+    \input ->
+        when parser input is
+            Match _ -> NoMatch
+            NoMatch -> Match { input, val: {} }
 
 unsafeFromUtf8 = \bytes ->
     when Str.fromUtf8 bytes is
@@ -481,4 +508,15 @@ expect
             ],
             expression: "(foo, bar)",
         },
+    ]
+
+# parses unicode characters correctly
+expect
+    result = parse "中文繁體{{model.foo}}🙂‍↕️🥝"
+
+    result
+    == [
+        Text "中文繁體",
+        Interpolation "model.foo",
+        Text "🙂‍↕️🥝",
     ]
