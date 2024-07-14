@@ -21,6 +21,7 @@ main =
         Cli.build {
             maybeInputDir: <- Opt.maybeStr { short: "i", long: "input-directory", help: "The directory containing the templates to be compiled. Defaults to the current directory." },
             maybeOutputDir: <- Opt.maybeStr { short: "o", long: "output-directory", help: "The directory Pages.roc will be written to. Defaults to the current directory." },
+            maybeExtension: <- Opt.maybeStr { short: "e", long: "extension", help: "The extension of the template files the CLI will search for. Defaults to `rtl`." },
         }
         |> Cli.finish {
             name: "rtl",
@@ -41,19 +42,19 @@ main =
         Ok args -> generate args
         Err errMsg -> Task.err (Exit 1 errMsg)
 
-extension = ".rtl"
-
-generate : { maybeInputDir : Result Str *, maybeOutputDir : Result Str * } -> Task {} _
+generate : { maybeInputDir : Result Str *, maybeOutputDir : Result Str *, maybeExtension : Result Str * } -> Task {} _
 generate = \args ->
 
     inputDir = args.maybeInputDir |> Result.withDefault "."
     outputDir = args.maybeOutputDir |> Result.withDefault "."
+    extension = args.maybeExtension |> Result.withDefault "rtl" |> Str.withPrefix "."
 
     start = Utc.now!
-    info! "Searching for templates in $(inputDir)"
+    info! "Searching for templates in $(inputDir) with extension $(extension)"
     paths =
         Dir.list inputDir
-            |> Task.map keepTemplates
+            |> Task.map \paths ->
+                keepTemplates paths extension
             |> Task.mapErr! \e -> error "Could not list directories: $(Inspect.toStr e)"
 
     invalidTemplateNames =
@@ -81,7 +82,7 @@ generate = \args ->
         else
             filePath = "$(outputDir)/Pages.roc"
             info! "Compiling templates"
-            File.writeUtf8 filePath (compile templates)
+            File.writeUtf8 filePath (compile templates extension)
                 |> Task.mapErr! \e -> error "Could not write file: $(Inspect.toStr e)"
 
             end = Utc.now!
@@ -103,14 +104,14 @@ rocCheck = \filePath ->
             ExitCode code -> Task.err (Exit code "")
             _ -> Task.err (Exit 1 "")
 
-keepTemplates : List Path -> List Str
-keepTemplates = \paths ->
+keepTemplates : List Path, Str -> List Str
+keepTemplates = \paths, extension ->
     paths
     |> List.map Path.display
     |> List.keepIf \str -> Str.endsWith str extension
 
-compile : List { path : Str, template : Str } -> Str
-compile = \templates ->
+compile : List { path : Str, template : Str }, Str -> Str
+compile = \templates, extension ->
     templates
     |> List.map \{ path, template } ->
         name =
