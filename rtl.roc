@@ -80,6 +80,10 @@ generate = \args ->
         if List.isEmpty templates then
             info! "No templates found"
         else
+            # If the directory already exists, Dir.createAll will return an error. This is fine, so we continue anyway.
+            Dir.createAll outputDir
+                |> Task.onErr! \_ -> Task.ok {}
+
             filePath = "$(outputDir)/Pages.roc"
             info! "Compiling templates"
             File.writeUtf8 filePath (compile templates extension)
