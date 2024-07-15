@@ -9,7 +9,7 @@ import cli.Path exposing [Path]
 import cli.Dir
 import cli.Arg
 import cli.Cmd
-import cli.Utc
+import cli.Utc exposing [Utc]
 import Parser
 import CodeGen
 import cli.Arg
@@ -17,6 +17,8 @@ import cli.Arg.Opt as Opt
 import cli.Arg.Cli as Cli
 
 main =
+    start = Utc.now!
+
     cliParser =
         Cli.build {
             maybeInputDir: <- Opt.maybeStr { short: "i", long: "input-directory", help: "The directory containing the templates to be compiled. Defaults to the current directory." },
@@ -38,18 +40,17 @@ main =
         }
         |> Cli.assertValid
 
-    when Cli.parseOrDisplayMessage cliParser (Arg.list! {}) is
-        Ok args -> generate args
-        Err errMsg -> Task.err (Exit 1 errMsg)
+    args =
+        Cli.parseOrDisplayMessage cliParser (Arg.list! {})
+            |> Task.fromResult
+            |> Task.mapErr! error
+    generate! args start
 
-generate : { maybeInputDir : Result Str *, maybeOutputDir : Result Str *, maybeExtension : Result Str * } -> Task {} _
-generate = \args ->
-
+generate : { maybeInputDir : Result Str *, maybeOutputDir : Result Str *, maybeExtension : Result Str * }, Utc -> Task {} _
+generate = \args, start ->
     inputDir = args.maybeInputDir |> Result.withDefault "."
     outputDir = args.maybeOutputDir |> Result.withDefault "."
     extension = args.maybeExtension |> Result.withDefault "rtl" |> Str.withPrefix "."
-
-    start = Utc.now!
     info! "Searching for templates in $(inputDir) with extension $(extension)"
     paths =
         Dir.list inputDir
@@ -80,15 +81,16 @@ generate = \args ->
         if List.isEmpty templates then
             info! "No templates found"
         else
+            # If the directory already exists, Dir.createAll will return an error. This is fine, so we continue anyway.
+            Dir.createAll outputDir
+                |> Task.onErr! \_ -> Task.ok {}
+
             filePath = "$(outputDir)/Pages.roc"
             info! "Compiling templates"
             File.writeUtf8 filePath (compile templates extension)
                 |> Task.mapErr! \e -> error "Could not write file: $(Inspect.toStr e)"
-
-            end = Utc.now!
-
-            time = Utc.toMillisSinceEpoch end - Utc.toMillisSinceEpoch start
-            info! "Generated $(filePath) in $(time |> Num.toStr)ms"
+            time = Utc.deltaAsMillis start (Utc.now!) |> Num.toStr
+            info! "Generated $(filePath) in $(time)ms"
 
             rocCheck! filePath
 
