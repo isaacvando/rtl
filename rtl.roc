@@ -1,5 +1,6 @@
 app [main] {
-    cli: platform "https://github.com/roc-lang/basic-cli/releases/download/0.12.0/Lb8EgiejTUzbggO2HVVuPJFkwvvsfW6LojkLR20kTVE.tar.br",
+    # TODO update with basic-cli 0.13.0 release when it is available
+    cli: platform "../basic-cli/platform/main.roc",
 }
 
 import cli.Stdout
@@ -13,19 +14,19 @@ import cli.Utc exposing [Utc]
 import Parser
 import CodeGen
 import cli.Arg
-import cli.Arg.Opt as Opt
-import cli.Arg.Cli as Cli
+import cli.Arg.Opt
+import cli.Arg.Cli
 
 main =
     start = Utc.now!
 
     cliParser =
-        Cli.build {
-            maybeInputDir: <- Opt.maybeStr { short: "i", long: "input-directory", help: "The directory containing the templates to be compiled. Defaults to the current directory." },
-            maybeOutputDir: <- Opt.maybeStr { short: "o", long: "output-directory", help: "The directory Pages.roc will be written to. Defaults to the current directory." },
-            maybeExtension: <- Opt.maybeStr { short: "e", long: "extension", help: "The extension of the template files the CLI will search for. Defaults to `rtl`." },
+        { Arg.Cli.combine <-
+            maybeInputDir: Arg.Opt.maybeStr { short: "i", long: "input-directory", help: "The directory containing the templates to be compiled. Defaults to the current directory." },
+            maybeOutputDir: Arg.Opt.maybeStr { short: "o", long: "output-directory", help: "The directory Pages.roc will be written to. Defaults to the current directory." },
+            maybeExtension: Arg.Opt.maybeStr { short: "e", long: "extension", help: "The extension of the template files the CLI will search for. Defaults to `rtl`." },
         }
-        |> Cli.finish {
+        |> Arg.Cli.finish {
             name: "rtl",
             version: "0.2.0",
             authors: ["Isaac Van Doren <https://github.com/isaacvando>"],
@@ -38,10 +39,10 @@ main =
             Get the latest version at https://github.com/isaacvando/rtl.
             """,
         }
-        |> Cli.assertValid
+        |> Arg.Cli.assertValid
 
     args =
-        Cli.parseOrDisplayMessage cliParser (Arg.list! {})
+        Arg.Cli.parseOrDisplayMessage cliParser (Arg.list! {})
             |> Task.fromResult
             |> Task.mapErr! error
     generate! args start
