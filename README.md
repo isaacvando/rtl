@@ -2,9 +2,6 @@
 
 A template language for Roc with compile time validation and tag unions. RTL can be used with HTML or any other textual content type.
 
-> [!WARNING]
-> Right now RTL uses basic-cli 0.12.0 which is in prerelease. If you can't build RTL locally, it might be because the URL changed and we haven't yet updated it here.
-
 First write a template like `hello.rtl`:
 
 ```html
