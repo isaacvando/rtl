@@ -162,6 +162,10 @@ If you want to get the syntax highlighting for the ambient content type in all o
 }
 ```
 
+## Talk
+
+I gave a talk about RTL at LambdaConf 2024 called [_Writing a Type-Safe HTML Template Language for Roc_](https://youtu.be/VXQub6U_BUM?si=8rzBNBRZHo0i5X1O) which explains how RTL takes advantages of Roc features like structural typing and type inference.
+
 ## Todo
 
 - [ ] Allow more control for whitespace around RTL tags.
