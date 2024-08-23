@@ -1,9 +1,8 @@
 app [main] {
-    cli: platform "https://github.com/roc-lang/basic-cli/releases/download/0.12.0/Lb8EgiejTUzbggO2HVVuPJFkwvvsfW6LojkLR20kTVE.tar.br",
+    cli: platform "https://github.com/roc-lang/basic-cli/releases/download/0.14.0/dC5ceT962N_4jmoyoffVdphJ_4GlW3YMhAPyGPr-nU0.tar.br",
 }
 
 import cli.Stdout
-import cli.Task exposing [Task]
 import cli.File
 import cli.Path exposing [Path]
 import cli.Dir
@@ -15,15 +14,16 @@ import CodeGen
 import cli.Arg
 import cli.Arg.Opt as Opt
 import cli.Arg.Cli as Cli
+import cli.Task exposing [Task]
 
 main =
     start = Utc.now!
 
     cliParser =
-        Cli.build {
-            maybeInputDir: <- Opt.maybeStr { short: "i", long: "input-directory", help: "The directory containing the templates to be compiled. Defaults to the current directory." },
-            maybeOutputDir: <- Opt.maybeStr { short: "o", long: "output-directory", help: "The directory Pages.roc will be written to. Defaults to the current directory." },
-            maybeExtension: <- Opt.maybeStr { short: "e", long: "extension", help: "The extension of the template files the CLI will search for. Defaults to `rtl`." },
+        { Cli.combine <-
+            maybeInputDir: Opt.maybeStr { short: "i", long: "input-directory", help: "The directory containing the templates to be compiled. Defaults to the current directory." },
+            maybeOutputDir: Opt.maybeStr { short: "o", long: "output-directory", help: "The directory Pages.roc will be written to. Defaults to the current directory." },
+            maybeExtension: Opt.maybeStr { short: "e", long: "extension", help: "The extension of the template files the CLI will search for. Defaults to `rtl`." },
         }
         |> Cli.finish {
             name: "rtl",
