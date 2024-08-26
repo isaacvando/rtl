@@ -1,5 +1,5 @@
 app [main] {
-    cli: platform "https://github.com/roc-lang/basic-cli/releases/download/0.14.0/dC5ceT962N_4jmoyoffVdphJ_4GlW3YMhAPyGPr-nU0.tar.br",
+    cli: platform "../basic-cli/platform/main.roc",
 }
 
 import cli.Stdout
@@ -14,11 +14,13 @@ import CodeGen
 import cli.Arg
 import cli.Arg.Opt as Opt
 import cli.Arg.Cli as Cli
-import cli.Task exposing [Task]
 
+main : Task {} [Exit I32 Str]_
 main =
-    start = Utc.now!
 
+    start = Utc.now! {}
+
+    cliParser : Cli.CliParser { maybeInputDir : _, maybeOutputDir : _, maybeExtension : _  }
     cliParser =
         { Cli.combine <-
             maybeInputDir: Opt.maybeStr { short: "i", long: "input-directory", help: "The directory containing the templates to be compiled. Defaults to the current directory." },
@@ -44,6 +46,7 @@ main =
         Cli.parseOrDisplayMessage cliParser (Arg.list! {})
             |> Task.fromResult
             |> Task.mapErr! error
+
     generate! args start
 
 generate : { maybeInputDir : Result Str *, maybeOutputDir : Result Str *, maybeExtension : Result Str * }, Utc -> Task {} _
@@ -89,7 +92,7 @@ generate = \args, start ->
             info! "Compiling templates"
             File.writeUtf8 filePath (compile templates extension)
                 |> Task.mapErr! \e -> error "Could not write file: $(Inspect.toStr e)"
-            time = Utc.deltaAsMillis start (Utc.now!) |> Num.toStr
+            time = Utc.deltaAsMillis start (Utc.now! {}) |> Num.toStr
             info! "Generated $(filePath) in $(time)ms"
 
             rocCheck! filePath

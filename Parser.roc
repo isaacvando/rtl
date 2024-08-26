@@ -56,25 +56,23 @@ node =
 
 interpolation : Parser Node
 interpolation =
-    (bytes, _) <- manyUntil anyByte (string "}}")
-        |> startWith (string "{{")
-        |> map
-
-    bytes
-    |> unsafeFromUtf8
-    |> Str.trim
-    |> Interpolation
+    manyUntil anyByte (string "}}")
+    |> startWith (string "{{")
+    |> map \(bytes, _) ->
+        bytes
+        |> unsafeFromUtf8
+        |> Str.trim
+        |> Interpolation
 
 rawInterpolation : Parser Node
 rawInterpolation =
-    (bytes, _) <- manyUntil anyByte (string "}}}")
-        |> startWith (string "{{{")
-        |> map
-
-    bytes
-    |> unsafeFromUtf8
-    |> Str.trim
-    |> RawInterpolation
+    manyUntil anyByte (string "}}}")
+    |> startWith (string "{{{")
+    |> map \(bytes, _) ->
+        bytes
+        |> unsafeFromUtf8
+        |> Str.trim
+        |> RawInterpolation
 
 whenIs : Parser Node
 whenIs =
