@@ -3,13 +3,13 @@ module [
     first,
     base,
     second,
-    ]
+]
 
 first = \model ->
     """
     <p>This is the innner content of the page for <em>first</em>. Here's a value: $(model.foo |> escapeHtml) </p>
     <a href="/second">second</a>
-    
+
     """
 
 base = \model ->
@@ -23,11 +23,11 @@ base = \model ->
     <body>
         <h1>We want to reuse the outer parts of this page on every page of the website.</h1>
         $(model.content)
-    
+
         <footer>2024 RTL</footer>
     </body>
     </html>
-    
+
     """
 
 second = \model ->
