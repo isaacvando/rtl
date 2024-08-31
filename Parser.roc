@@ -56,91 +56,89 @@ node =
 
 interpolation : Parser Node
 interpolation =
-    (bytes, _) <- manyUntil anyByte (string "}}")
-        |> startWith (string "{{")
-        |> map
-
-    bytes
-    |> unsafeFromUtf8
-    |> Str.trim
-    |> Interpolation
+    manyUntil anyByte (string "}}")
+    |> startWith (string "{{")
+    |> map \(bytes, _) ->
+        bytes
+        |> unsafeFromUtf8
+        |> Str.trim
+        |> Interpolation
 
 rawInterpolation : Parser Node
 rawInterpolation =
-    (bytes, _) <- manyUntil anyByte (string "}}}")
-        |> startWith (string "{{{")
-        |> map
-
-    bytes
-    |> unsafeFromUtf8
-    |> Str.trim
-    |> RawInterpolation
+    manyUntil anyByte (string "}}}")
+    |> startWith (string "{{{")
+    |> map \(bytes, _) ->
+        bytes
+        |> unsafeFromUtf8
+        |> Str.trim
+        |> RawInterpolation
 
 whenIs : Parser Node
 whenIs =
-    (expression, _) <- manyUntil anyByte (string " |}" |> endWith whitespace)
-        |> startWith (string "{|when ")
-        |> try
+    manyUntil anyByte (string " |}" |> endWith whitespace)
+    |> startWith (string "{|when ")
+    |> try \(expression, _) ->
 
-    case =
-        (pattern, _) <- manyUntil anyByte (string " |}")
+        case =
+            manyUntil anyByte (string " |}")
             |> startWith (string "{|is ")
-            |> try
+            |> try \(pattern, _) ->
 
-        branch <- manyBefore node (oneOf [string "{|is ", string "{|endwhen|}"])
-            |> map
+                manyBefore node (oneOf [string "{|is ", string "{|endwhen|}"])
+                |> map \branch ->
 
-        { pattern: unsafeFromUtf8 pattern, branch }
+                    { pattern: unsafeFromUtf8 pattern, branch }
 
-    (cases, _) <- manyUntil case (string "{|endwhen|}")
-        |> map
+        manyUntil case (string "{|endwhen|}")
+        |> map \(cases, _) ->
 
-    WhenIs {
-        expression: unsafeFromUtf8 expression,
-        cases,
-    }
+            WhenIs {
+                expression: unsafeFromUtf8 expression,
+                cases,
+            }
 
 sequence : Parser Node
 sequence =
-    (item, _) <- manyUntil anyByte (string " : ")
-        |> startWith (string "{|list ")
-        |> try
+    manyUntil anyByte (string " : ")
+    |> startWith (string "{|list ")
+    |> try \(item, _) ->
 
-    (list, _) <-
         manyUntil anyByte (string " |}")
-        |> try
+        |> try \(list, _) ->
 
-    (body, _) <- manyUntil node (string "{|endlist|}")
-        |> map
+            manyUntil node (string "{|endlist|}")
+            |> map \(body, _) ->
 
-    Sequence {
-        item: unsafeFromUtf8 item,
-        list: unsafeFromUtf8 list,
-        body: body,
-    }
+                Sequence {
+                    item: unsafeFromUtf8 item,
+                    list: unsafeFromUtf8 list,
+                    body: body,
+                }
 
 conditional =
-    (condition, _) <- manyUntil anyByte (string " |}")
-        |> startWith (string "{|if ")
-        |> try
+    manyUntil anyByte (string " |}")
+    |> startWith (string "{|if ")
+    |> try \(condition, _) ->
 
-    (trueBranch, separator) <- manyUntil node (oneOf [string "{|endif|}", string "{|else|}"])
-        |> try
+        manyUntil node (oneOf [string "{|endif|}", string "{|else|}"])
+        |> try \(trueBranch, separator) ->
 
-    parseFalseBranch =
-        if separator == "{|endif|}" then
-            \input -> Match { input, val: [] }
-        else
-            manyUntil node (string "{|endif|}")
-            |> map .0
+            parseFalseBranch =
+                if separator == "{|endif|}" then
+                    \input -> Match { input, val: [] }
+                else
+                    manyUntil node (string "{|endif|}")
+                    |> map .0
 
-    falseBranch <- parseFalseBranch |> map
+            parseFalseBranch
+            |> map \falseBranch ->
 
-    Conditional {
-        condition: unsafeFromUtf8 condition,
-        trueBranch,
-        falseBranch,
-    }
+                Conditional {
+                    condition: unsafeFromUtf8 condition,
+                    trueBranch,
+                    falseBranch,
+                }
 
 text : Bool -> Parser Node
 text = \allowTags -> \input ->
@@ -206,13 +204,11 @@ whitespace =
 
 startWith : Parser a, Parser * -> Parser a
 startWith = \parser, start ->
-    _ <- start |> try
-    parser
+    try start \_ -> parser
 
 endWith : Parser a, Parser * -> Parser a
 endWith = \parser, end ->
-    result <- parser |> try
-    end |> map \_ -> result
+    try parser \result -> end |> map \_ -> result
 
 oneOf : List (Parser a) -> Parser a
 oneOf = \options ->

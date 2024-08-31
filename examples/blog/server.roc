@@ -1,10 +1,13 @@
-app [main] { pf: platform "https://github.com/roc-lang/basic-webserver/releases/download/0.5.0/Vq-iXfrRf-aHxhJpAh71uoVUlC-rsWvmjzTYOJKhu4M.tar.br" }
+app [Model, server] { pf: platform "https://github.com/roc-lang/basic-webserver/releases/download/0.9.0/taU2jQuBf-wB8EJb0hAkrYLYOGacUU5Y9reiHG45IY4.tar.br" }
 
-import pf.Task exposing [Task]
 import pf.Http
 import Pages
 
-main = \req ->
+Model : {}
+
+server = { init: Task.ok {}, respond }
+
+respond = \req, _ ->
     when Str.split req.url "/" |> List.dropFirst 1 is
         ["posts", slug] ->
             maybePost = posts |> List.findFirst \post -> post.slug == slug

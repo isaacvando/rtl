@@ -1,13 +1,13 @@
-app "server"
-    packages { pf: "https://github.com/roc-lang/basic-webserver/releases/download/0.3.0/gJOTXTeR3CD4zCbRqK7olo4edxQvW5u3xGL-8SSxDcY.tar.br" }
-    imports [
-        pf.Task.{ Task },
-        pf.Http.{ Request, Response },
-        Pages,
-    ]
-    provides [main] to pf
+app [Model, server] { pf: platform "https://github.com/roc-lang/basic-webserver/releases/download/0.9.0/taU2jQuBf-wB8EJb0hAkrYLYOGacUU5Y9reiHG45IY4.tar.br" }
 
-main = \req ->
+import pf.Http
+import Pages
+
+Model : {}
+
+server = { init: Task.ok {}, respond }
+
+respond = \req, _ ->
     when Str.split req.url "/" |> List.dropFirst 1 is
         ["first"] ->
             Pages.base {
