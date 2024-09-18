@@ -42,12 +42,9 @@ main =
         }
         |> Cli.assertValid
 
-    args =
-        Cli.parseOrDisplayMessage cliParser (Arg.list! {})
-            |> Task.fromResult
-            |> Task.mapErr! error
-
-    generate! args start
+    when Cli.parseOrDisplayMessage cliParser (Arg.list! {}) is
+        Err msg -> Stdout.line msg
+        Ok args -> generate! args start
 
 generate : { maybeInputDir : Result Str *, maybeOutputDir : Result Str *, maybeExtension : Result Str * }, Utc -> Task {} _
 generate = \args, start ->
