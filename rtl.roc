@@ -74,28 +74,30 @@ generate = \args, start ->
             Each template must start with a lowercase letter and only contain letters and numbers.
             """
         |> Task.err
-    else
-        templates =
-            taskAll! paths \path ->
-                File.readUtf8 path
-                |> Task.map \template -> { path, template }
-                |> Task.mapErr \e -> error "Could not read the templates: $(Inspect.toStr e)"
-
-        if List.isEmpty templates then
-            info! "No templates found"
         else
-            # If the directory already exists, Dir.createAll will return an error. This is fine, so we continue anyway.
-            Dir.createAll outputDir
-                |> Task.onErr! \_ -> Task.ok {}
 
-            filePath = "$(outputDir)/Pages.roc"
-            info! "Compiling templates"
-            File.writeUtf8 filePath (compile templates extension)
-                |> Task.mapErr! \e -> error "Could not write file: $(Inspect.toStr e)"
-            time = Utc.deltaAsMillis start (Utc.now! {}) |> Num.toStr
-            info! "Generated $(filePath) in $(time)ms"
+    templates =
+        taskAll! paths \path ->
+            File.readUtf8 path
+            |> Task.map \template -> { path, template }
+            |> Task.mapErr \e -> error "Could not read the templates: $(Inspect.toStr e)"
 
-            rocCheck! filePath
+    if List.isEmpty templates then
+        info! "No templates found"
+        else
+
+    # If the directory already exists, Dir.createAll will return an error. This is fine, so we continue anyway.
+    Dir.createAll outputDir
+        |> Task.onErr! \_ -> Task.ok {}
+
+    filePath = "$(outputDir)/Pages.roc"
+    info! "Compiling templates"
+    File.writeUtf8 filePath (compile templates extension)
+        |> Task.mapErr! \e -> error "Could not write file: $(Inspect.toStr e)"
+    time = Utc.deltaAsMillis start (Utc.now! {}) |> Num.toStr
+    info! "Generated $(filePath) in $(time)ms"
+
+    rocCheck! filePath
 
 rocCheck : Str -> Task {} _
 rocCheck = \filePath ->
