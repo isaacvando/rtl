@@ -4,6 +4,7 @@ Node : [
     Text Str,
     Interpolation Str,
     RawInterpolation Str,
+    ModuleImport Str,
     Conditional { condition : Str, trueBranch : List Node, falseBranch : List Node },
     Sequence { item : Str, list : Str, body : List Node },
     WhenIs { expression : Str, cases : List { pattern : Str, branch : List Node } },
@@ -48,6 +49,7 @@ node =
         text Bool.false,
         rawInterpolation,
         interpolation,
+        importModule,
         sequence,
         whenIs,
         conditional,
@@ -63,6 +65,16 @@ interpolation =
         |> unsafeFromUtf8
         |> Str.trim
         |> Interpolation
+
+importModule : Parser Node
+importModule =
+    manyUntil anyByte (string "|}")
+    |> startWith (string "{|import")
+    |> map \(bytes, _) ->
+        bytes
+        |> unsafeFromUtf8
+        |> Str.trim
+        |> ModuleImport
 
 rawInterpolation : Parser Node
 rawInterpolation =
