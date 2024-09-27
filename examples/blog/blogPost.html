@@ -1,21 +1,24 @@
-<!DOCTYPE html>
+{|import Format |}
+<!doctype html>
 <html>
-<head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <title>{{ model.post.title }} - Roc Template Example</title>
-</head>
-<body>
-    <div>
-        <h1>{{ model.post.title }}</h1>
-        {|list item : model.post.content |}
-            {|when item |}
-            {|is Text t |} <p>{{ t }}</p>
-            {|is Code c |} <pre>{{ c }}</pre>
-            {|is Image i |} <img src="{{i}}" width=100>
-            {|endwhen|}
-        {|endlist|}
-        <br>
-        <a href="/">Home</a>
-    </div>
-</body>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>
+            {{ model.post.title |> Format.toUpper |> Result.withDefault "" }} -
+            Roc Template Example
+        </title>
+    </head>
+    <body>
+        <div>
+            <h1>{{ model.post.title }}</h1>
+            {|list item : model.post.content |} {|when item |} {|is Text t |}
+            <p>{{ t }}</p>
+            {|is Code c |}
+            <pre>{{ c }}</pre>
+            {|is Image i |} <img src="{{i}}" width="100" />
+            {|endwhen|} {|endlist|}
+            <br />
+            <a href="/">Home</a>
+        </div>
+    </body>
 </html>

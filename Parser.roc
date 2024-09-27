@@ -390,6 +390,18 @@ expect
         """
     result == [Text "foo\nbar\n", Interpolation "model.baz", Text "\nfoo"]
 
+# Simple import
+expect
+    result = parse
+        "{|import SomeModule |}"
+    result == [ModuleImport "SomeModule"]
+
+# import within conditional
+expect
+    result = parse
+        "{|if Bool.true |}{|import SomeModule |}{|endif|}"
+    result == [Conditional { condition: "Bool.true", trueBranch: [ModuleImport "SomeModule"], falseBranch: [] }]
+
 # paragraph containing conditional
 expect
     result = parse
