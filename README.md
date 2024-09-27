@@ -142,6 +142,14 @@ If it is necessary to insert content without escaping HTML, use triple brackets.
 
 This is useful for generating content types other than HTML or combining multiple templates into one final HTML output.
 
+### Imports
+
+You can import a module into the template like this.
+
+```
+{|import MyModule |}
+```
+
 ## Tips
 
 ### Hot Reloading

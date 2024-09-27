@@ -14,6 +14,13 @@ generate = \templates ->
         |> List.map \template -> "    $(template.name),"
         |> Str.joinWith "\n"
 
+    imports =
+        templates
+        |> List.walk (Set.empty {}) \acc, template -> Set.union acc (moduleImports template)
+        |> Set.toList
+        |> List.map \moduleImport -> "import $(moduleImport)"
+        |> Str.joinWith "\n"
+
     # If we included escapeHtml in every module, templates without interpolations would
     # trigger a warning when running roc check for escapeHtml not being used.
     requiresEscapeHtml = List.any templates \{ nodes } ->
@@ -25,9 +32,18 @@ generate = \templates ->
     $(names)
         ]
 
+    $(imports)
+
     $(functions)
     $(if requiresEscapeHtml then escapeHtml else "")
     """
+
+moduleImports = \template ->
+    template.nodes
+    |> List.walk (Set.empty {}) \acc, n ->
+        when n is
+            ModuleImport m -> Set.insert acc m
+            _ -> acc
 
 containsInterpolation : List Node -> Bool
 containsInterpolation = \nodes ->
@@ -42,7 +58,7 @@ containsInterpolation = \nodes ->
                 List.any cases \case ->
                     containsInterpolation case.branch
 
-            Text _ | RawInterpolation _ -> Bool.false
+            Text _ | RawInterpolation _ | ModuleImport _ -> Bool.false
 
 escapeHtml =
     """
@@ -145,6 +161,7 @@ condense = \nodes ->
                 Text escaped
 
             Sequence { item, list, body } -> Sequence { item, list, body: condense body }
+            ModuleImport _ -> Text ""
             Conditional { condition, trueBranch, falseBranch } ->
                 Conditional {
                     condition,
@@ -187,7 +204,7 @@ isModelUsedInNode = \node ->
             || List.any cases \case ->
                 isModelUsedInList case.branch
 
-        Text _ -> Bool.false
+        Text _ | ModuleImport _ -> Bool.false
 
 indent : Str -> Str
 indent = \input ->
