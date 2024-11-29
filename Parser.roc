@@ -160,7 +160,7 @@ text = \allowTags -> \input ->
         if !allowTags && inputStartsWithTags then
             NoMatch
         else if inputStartsWithTags then
-            { before, others } = List.split input 2
+            { before, others } = List.splitAt input 2
             (consumed, remaining) = splitWhen others startsWithTags
 
             Match {
@@ -216,7 +216,8 @@ whitespace =
 
 startWith : Parser a, Parser * -> Parser a
 startWith = \parser, start ->
-    try start \_ -> parser
+    start \_ -> parser
+    |> try
 
 endWith : Parser a, Parser * -> Parser a
 endWith = \parser, end ->

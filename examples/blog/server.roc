@@ -8,7 +8,7 @@ Model : {}
 server = { init: Task.ok {}, respond }
 
 respond = \req, _ ->
-    when Str.split req.url "/" |> List.dropFirst 1 is
+    when Str.splitOn req.url "/" |> List.dropFirst 1 is
         ["posts", slug] ->
             maybePost = posts |> List.findFirst \post -> post.slug == slug
 

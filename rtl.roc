@@ -1,5 +1,5 @@
 app [main] {
-    cli: platform "https://github.com/roc-lang/basic-cli/releases/download/0.15.0/SlwdbJ-3GR7uBWQo6zlmYWNYOxnvo8r6YABXD-45UOw.tar.br",
+    cli: platform "https://github.com/roc-lang/basic-cli/releases/download/0.17.0/lZFLstMUCUvd5bjnnpYromZJXkQUrdhbva4xdBInicE.tar.br",
 }
 
 import cli.Stdout
@@ -126,7 +126,7 @@ compile = \templates, extension ->
 
 getFileName : Str -> Str
 getFileName = \path ->
-    when Str.split path "/" is
+    when Str.splitOn path "/" is
         [.., filename] -> filename
         _ -> crash "This is a bug! This case should not happen."
 
