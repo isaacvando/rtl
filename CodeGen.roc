@@ -208,7 +208,7 @@ isModelUsedInNode = \node ->
 
 indent : Str -> Str
 indent = \input ->
-    Str.split input "\n"
+    Str.splitOn input "\n"
     |> List.map \str ->
         Str.concat "    " str
     |> Str.joinWith "\n"

@@ -90,12 +90,12 @@ whenIs : Parser Node
 whenIs =
     manyUntil anyByte (string " |}" |> endWith whitespace)
     |> startWith (string "{|when ")
-    |> try \(expression, _) ->
+    |> andThen \(expression, _) ->
 
         case =
             manyUntil anyByte (string " |}")
             |> startWith (string "{|is ")
-            |> try \(pattern, _) ->
+            |> andThen \(pattern, _) ->
 
                 manyBefore node (oneOf [string "{|is ", string "{|endwhen|}"])
                 |> map \branch ->
@@ -114,10 +114,10 @@ sequence : Parser Node
 sequence =
     manyUntil anyByte (string " : ")
     |> startWith (string "{|list ")
-    |> try \(item, _) ->
+    |> andThen \(item, _) ->
 
         manyUntil anyByte (string " |}")
-        |> try \(list, _) ->
+        |> andThen \(list, _) ->
 
             manyUntil node (string "{|endlist|}")
             |> map \(body, _) ->
@@ -131,10 +131,10 @@ sequence =
 conditional =
     manyUntil anyByte (string " |}")
     |> startWith (string "{|if ")
-    |> try \(condition, _) ->
+    |> andThen \(condition, _) ->
 
         manyUntil node (oneOf [string "{|endif|}", string "{|else|}"])
-        |> try \(trueBranch, separator) ->
+        |> andThen \(trueBranch, separator) ->
 
             parseFalseBranch =
                 if separator == "{|endif|}" then
@@ -160,7 +160,7 @@ text = \allowTags -> \input ->
         if !allowTags && inputStartsWithTags then
             NoMatch
         else if inputStartsWithTags then
-            { before, others } = List.split input 2
+            { before, others } = List.splitAt input 2
             (consumed, remaining) = splitWhen others startsWithTags
 
             Match {
@@ -216,11 +216,11 @@ whitespace =
 
 startWith : Parser a, Parser * -> Parser a
 startWith = \parser, start ->
-    try start \_ -> parser
+    andThen start \_ -> parser
 
 endWith : Parser a, Parser * -> Parser a
 endWith = \parser, end ->
-    try parser \result -> end |> map \_ -> result
+    andThen parser \result -> end |> map \_ -> result
 
 oneOf : List (Parser a) -> Parser a
 oneOf = \options ->
@@ -270,8 +270,8 @@ manyBefore = \parser, end ->
 
     \input -> help input []
 
-try : Parser a, (a -> Parser b) -> Parser b
-try = \parser, mapper ->
+andThen : Parser a, (a -> Parser b) -> Parser b
+andThen = \parser, mapper ->
     \input ->
         when parser input is
             NoMatch -> NoMatch
