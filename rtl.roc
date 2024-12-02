@@ -1,5 +1,5 @@
 app [main] {
-    cli: platform "https://github.com/roc-lang/basic-cli/releases/download/0.15.0/SlwdbJ-3GR7uBWQo6zlmYWNYOxnvo8r6YABXD-45UOw.tar.br",
+    cli: platform "https://github.com/roc-lang/basic-cli/releases/download/0.17.0/lZFLstMUCUvd5bjnnpYromZJXkQUrdhbva4xdBInicE.tar.br",
 }
 
 import cli.Stdout
@@ -54,9 +54,9 @@ generate = \args, start ->
     info! "Searching for templates in $(inputDir) with extension $(extension)"
     paths =
         Dir.list inputDir
-            |> Task.map \paths ->
-                keepTemplates paths extension
-            |> Task.mapErr! \e -> error "Could not list directories: $(Inspect.toStr e)"
+        |> Task.map \paths ->
+            keepTemplates paths extension
+        |> Task.mapErr! \e -> error "Could not list directories: $(Inspect.toStr e)"
 
     invalidTemplateNames =
         List.map paths \p ->
@@ -85,12 +85,12 @@ generate = \args, start ->
 
     # If the directory already exists, Dir.createAll will return an error. This is fine, so we continue anyway.
     Dir.createAll outputDir
-        |> Task.onErr! \_ -> Task.ok {}
+    |> Task.onErr! \_ -> Task.ok {}
 
     filePath = "$(outputDir)/Pages.roc"
     info! "Compiling templates"
-    File.writeUtf8 filePath (compile templates extension)
-        |> Task.mapErr! \e -> error "Could not write file: $(Inspect.toStr e)"
+    File.writeUtf8 (compile templates extension) filePath
+    |> Task.mapErr! \e -> error "Could not write file: $(Inspect.toStr e)"
     time = Utc.deltaAsMillis start (Utc.now! {}) |> Num.toStr
     info! "Generated $(filePath) in $(time)ms"
 
@@ -126,7 +126,7 @@ compile = \templates, extension ->
 
 getFileName : Str -> Str
 getFileName = \path ->
-    when Str.split path "/" is
+    when Str.splitOn path "/" is
         [.., filename] -> filename
         _ -> crash "This is a bug! This case should not happen."
 
