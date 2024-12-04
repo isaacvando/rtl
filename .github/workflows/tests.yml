@@ -22,5 +22,8 @@ jobs:
         with:
           roc-version: nightly
 
-      - name: Run tests
+      - name: Run unit tests
         run: roc test rtl.roc
+
+      - name: Run snapshot tests
+        run: cd snapshots && ./test.sh
