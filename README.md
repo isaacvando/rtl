@@ -9,7 +9,7 @@ First write a template like `hello.rtl`:
 
 <ul>
   {|list number : model.numbers |}
-  <li>{{Num.toStr number}}</li>
+  <li>{{ Num.toStr number }}</li>
   {|endlist|}
 </ul>
 
@@ -48,16 +48,16 @@ to generate your HTML!
 
 ## Installation
 
-Right now RTL must be built locally. For a quick start, run these commands to build RTL and place it in `/usr/local/bin`.
+Right now RTL must be built from source:
 
 ```bash
-wget https://github.com/isaacvando/rtl/archive/refs/heads/main.zip
-unzip main.zip
-roc build rtl-main/rtl.roc --optimize
-sudo mv rtl-main/rtl /usr/local/bin
-rm -r rtl-main main.zip
-rtl --help
+git clone https://github.com/isaacvando/rtl.git
+cd rtl
+roc build rtl.roc --optimize
+sudo mv rtl /usr/local/bin
 ```
+
+Note that building with `--optimize` may take more than 30s (unoptimized builds are fast).
 
 ## How It Works
 
