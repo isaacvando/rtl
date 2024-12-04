@@ -3,13 +3,14 @@ module [
     template,
     ]
 
-
+import Math
 
 template = \model ->
     [
         """
         <!DOCTYPE html>
         <html lang="en">
+        
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -61,6 +62,32 @@ template = \model ->
             "",
         """
         
+        
+            <p>Module calculation: $(Math.add 123 345 |> Num.toStr |> escapeHtml)</p>
+        
+            
+        """,
+        when model.animal is
+            Dog "fido" ->
+                """
+                 Hello Fido
+                    
+                """
+            Cat {name: "Gob", age} ->
+                """
+                 Hello Gob, Age: $(Num.toStr age |> escapeHtml)
+                    
+                """
+            _ ->
+                """
+                 Sorry, don't know that animal
+                    
+                """
+        ,
+        """
+        
+        
+            $("<p>Raw interpolation test</p>")
         </body>
         </html>
         

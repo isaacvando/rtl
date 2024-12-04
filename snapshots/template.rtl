@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+{|import Math |}
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -23,5 +24,15 @@
     {|if !model.condition || Bool.false |}
     {{Inspect.toStr model.condition}}
     {|endif|}
+
+    <p>Module calculation: {{ Math.add 123 345 |> Num.toStr }}</p>
+
+    {|when model.animal |}
+    {|is Dog "fido" |} Hello Fido
+    {|is Cat {name: "Gob", age} |} Hello Gob, Age: {{ Num.toStr age }}
+    {|is _ |} Sorry, don't know that animal
+    {|endwhen|}
+
+    {{{ "<p>Raw interpolation test</p>" }}}
 </body>
 </html>
