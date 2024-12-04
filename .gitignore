@@ -2,3 +2,5 @@ server
 output
 rtl
 snap
+snapshots/output.txt
+snapshots/Pages.roc
