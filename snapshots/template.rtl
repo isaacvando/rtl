@@ -19,5 +19,9 @@
     {|else|}
     False
     {|endif|}
+
+    {|if !model.condition || Bool.false |}
+    {{Inspect.toStr model.condition}}
+    {|endif|}
 </body>
 </html>
