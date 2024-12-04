@@ -58,7 +58,7 @@ node =
 
 interpolation : Parser Node
 interpolation =
-    manyUntil anyByte (string "}}")
+    manyUntil horizontalByte (string "}}")
     |> startWith (string "{{")
     |> map \(bytes, _) ->
         bytes
@@ -68,7 +68,7 @@ interpolation =
 
 importModule : Parser Node
 importModule =
-    manyUntil anyByte (string "|}")
+    manyUntil horizontalByte (string "|}")
     |> startWith (string "{|import")
     |> map \(bytes, _) ->
         bytes
@@ -78,7 +78,7 @@ importModule =
 
 rawInterpolation : Parser Node
 rawInterpolation =
-    manyUntil anyByte (string "}}}")
+    manyUntil horizontalByte (string "}}}")
     |> startWith (string "{{{")
     |> map \(bytes, _) ->
         bytes
@@ -88,12 +88,12 @@ rawInterpolation =
 
 whenIs : Parser Node
 whenIs =
-    manyUntil anyByte (string " |}" |> endWith whitespace)
+    manyUntil horizontalByte (string " |}" |> endWith whitespace)
     |> startWith (string "{|when ")
     |> andThen \(expression, _) ->
 
         case =
-            manyUntil anyByte (string " |}")
+            manyUntil horizontalByte (string " |}")
             |> startWith (string "{|is ")
             |> andThen \(pattern, _) ->
 
@@ -112,11 +112,11 @@ whenIs =
 
 sequence : Parser Node
 sequence =
-    manyUntil anyByte (string " : ")
+    manyUntil horizontalByte (string " : ")
     |> startWith (string "{|list ")
     |> andThen \(item, _) ->
 
-        manyUntil anyByte (string " |}")
+        manyUntil horizontalByte (string " |}")
         |> andThen \(list, _) ->
 
             manyUntil node (string "{|endlist|}")
@@ -129,7 +129,7 @@ sequence =
                 }
 
 conditional =
-    manyUntil anyByte (string " |}")
+    manyUntil horizontalByte (string " |}")
     |> startWith (string "{|if ")
     |> andThen \(condition, _) ->
 
@@ -194,10 +194,10 @@ string = \str ->
         else
             NoMatch
 
-anyByte : Parser U8
-anyByte = \input ->
+horizontalByte : Parser U8
+horizontalByte = \input ->
     when input is
-        [first, .. as rest] -> Match { input: rest, val: first }
+        [first, .. as rest] if first != '\n' -> Match { input: rest, val: first }
         _ -> NoMatch
 
 scalar : U8 -> Parser U8
@@ -533,7 +533,7 @@ expect
         },
     ]
 
-# parses unicode characters correctly be
+# parses unicode characters correctly
 expect
     result = parse
         """
@@ -563,3 +563,45 @@ expect
 expect
     result = parse "{|if Bool.true |}{|list model.cities |}"
     result == [Text "{|if Bool.true |}{|list model.cities |}"]
+
+# multiline tags are not allowed
+expect
+    result = parse
+        """
+        {{ "firstline"
+        |> Str.concat "secondline"}}
+        {{{"raw"
+        }}}
+        {|if Bool.true
+        |}{|endif|}
+        {|when result
+        |}
+        {| _ |} foo
+        {|endwhen|}
+        {|list item
+        : list|}
+        {|endlist|}
+        {|import
+        Module |}
+        """
+    result
+    == [
+        Text
+            """
+            {{ "firstline"
+            |> Str.concat "secondline"}}
+            {{{"raw"
+            }}}
+            {|if Bool.true
+            |}{|endif|}
+            {|when result
+            |}
+            {| _ |} foo
+            {|endwhen|}
+            {|list item
+            : list|}
+            {|endlist|}
+            {|import
+            Module |}
+            """,
+    ]
