@@ -26,4 +26,4 @@ jobs:
         run: roc test rtl.roc
 
       - name: Run snapshot tests
-        run: ./snapshots/test.sh
+        run: cd snapshots && ./test.sh
