@@ -5,11 +5,11 @@ roc build ../rtl.roc
 roc output.roc > output.txt
 
 exit_code=0
-if ! diff "output.txt" "expectedOutput.txt"; then
+if ! git diff --no-index "output.txt" "expectedOutput.txt"; then
     exit_code=1
 fi
 
-if ! diff "Pages.roc" "ExpectedPages.roc"; then
+if ! git diff --no-index "Pages.roc" "ExpectedPages.roc"; then
     exit_code=1
 fi
 
