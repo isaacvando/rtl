@@ -48,6 +48,19 @@ template = \model ->
             """,
         """
         
+        
+            
+        """,
+        if !model.condition || Bool.false then
+            """
+            
+                $(Inspect.toStr model.condition |> escapeHtml)
+                
+            """
+        else
+            "",
+        """
+        
         </body>
         </html>
         
