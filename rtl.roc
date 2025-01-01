@@ -21,12 +21,12 @@ main! = \args ->
 
     start = Utc.now! {}
 
-    cli_parser : Cli.CliParser { maybe_input_dir : _, maybe_output_dir : _, maybe_extension : _ }
+    cli_parser : Cli.CliParser { input_dir : _, output_dir : _, extensionWithoutDot : _ }
     cli_parser =
         { Cli.weave <-
-            maybe_input_dir: Opt.maybe_str { short: "i", long: "input-directory", help: "The directory containing the templates to be compiled. Defaults to the current directory." },
-            maybe_output_dir: Opt.maybe_str { short: "o", long: "output-directory", help: "The directory Pages.roc will be written to. Defaults to the current directory." },
-            maybe_extension: Opt.maybe_str { short: "e", long: "extension", help: "The extension of the template files the CLI will search for. Defaults to `rtl`." },
+            input_dir: Opt.str { short: "i", long: "input-directory", help: "The directory containing the templates to be compiled. Defaults to the current directory.", default: Value "." },
+            output_dir: Opt.str { short: "o", long: "output-directory", help: "The directory Pages.roc will be written to. Defaults to the current directory.", default: Value "." },
+            extensionWithoutDot: Opt.str { short: "e", long: "extension", help: "The extension of the template files the CLI will search for. Defaults to `rtl`.", default: Value "rtl" },
         }
         |> Cli.finish {
             name: "rtl",
@@ -47,11 +47,9 @@ main! = \args ->
         Err msg -> Stdout.line! msg
         Ok parsedArgs -> generate! parsedArgs start
 
-generate! : { maybe_input_dir : Result Str *, maybe_output_dir : Result Str *, maybe_extension : Result Str * }, Utc => Result {} _
-generate! = \args, start ->
-    input_dir = args.maybe_input_dir |> Result.withDefault "."
-    output_dir = args.maybe_output_dir |> Result.withDefault "."
-    extension = args.maybe_extension |> Result.withDefault "rtl" |> Str.withPrefix "."
+generate! : { input_dir : Str, output_dir : Str, extensionWithoutDot : Str }, Utc => Result {} _
+generate! = \{ input_dir, output_dir, extensionWithoutDot }, start ->
+    extension = extensionWithoutDot |> Str.withPrefix "."
     _ = info! "Searching for templates in $(input_dir) with extension $(extension)"
     paths =
         Dir.list! input_dir
