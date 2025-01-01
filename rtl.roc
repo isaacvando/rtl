@@ -50,7 +50,7 @@ main! = \args ->
 generate! : { input_dir : Str, output_dir : Str, extensionWithoutDot : Str }, Utc => Result {} _
 generate! = \{ input_dir, output_dir, extensionWithoutDot }, start ->
     extension = extensionWithoutDot |> Str.withPrefix "."
-    _ = info! "Searching for templates in $(input_dir) with extension $(extension)"
+    info! "Searching for templates in $(input_dir) with extension $(extension)" |> try
     paths =
         Dir.list! input_dir
         |> Result.map \ps ->
@@ -85,23 +85,21 @@ generate! = \{ input_dir, output_dir, extensionWithoutDot }, start ->
         else
 
     # If the directory already exists, Dir.create_all! will return an error. This is fine, so we continue anyway.
-    _ =
-        Dir.create_all! output_dir
-        |> Result.onErr! \_ -> Ok {}
+    _ = Dir.create_all! output_dir
 
     file_path = "$(output_dir)/Pages.roc"
-    _ = info! "Compiling templates"
-    _ =
-        File.write_utf8! (compile templates extension) file_path
-        |> Result.mapErr \e -> error "Could not write file: $(Inspect.toStr e)"
+    info! "Compiling templates" |> try
+    File.write_utf8! (compile templates extension) file_path
+    |> Result.mapErr \e -> error "Could not write file: $(Inspect.toStr e)"
+    |> try
     time = Utc.delta_as_millis start (Utc.now! {}) |> Num.toStr
-    _ = info! "Generated $(file_path) in $(time)ms"
+    info! "Generated $(file_path) in $(time)ms" |> try
 
     roc_check! file_path
 
 roc_check! : Str => Result {} _
 roc_check! = \file_path ->
-    _ = info! "Running `roc check` on $(file_path)"
+    info! "Running `roc check` on $(file_path)" |> try
 
     Cmd.new "roc"
     |> Cmd.args ["check", file_path]
