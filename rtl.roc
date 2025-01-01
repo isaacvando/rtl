@@ -21,12 +21,12 @@ main! = \args ->
 
     start = Utc.now! {}
 
-    cliParser : Cli.CliParser { maybeInputDir : _, maybeOutputDir : _, maybeExtension : _ }
-    cliParser =
+    cli_parser : Cli.CliParser { maybe_input_dir : _, maybe_output_dir : _, maybe_extension : _ }
+    cli_parser =
         { Cli.weave <-
-            maybeInputDir: Opt.maybe_str { short: "i", long: "input-directory", help: "The directory containing the templates to be compiled. Defaults to the current directory." },
-            maybeOutputDir: Opt.maybe_str { short: "o", long: "output-directory", help: "The directory Pages.roc will be written to. Defaults to the current directory." },
-            maybeExtension: Opt.maybe_str { short: "e", long: "extension", help: "The extension of the template files the CLI will search for. Defaults to `rtl`." },
+            maybe_input_dir: Opt.maybe_str { short: "i", long: "input-directory", help: "The directory containing the templates to be compiled. Defaults to the current directory." },
+            maybe_output_dir: Opt.maybe_str { short: "o", long: "output-directory", help: "The directory Pages.roc will be written to. Defaults to the current directory." },
+            maybe_extension: Opt.maybe_str { short: "e", long: "extension", help: "The extension of the template files the CLI will search for. Defaults to `rtl`." },
         }
         |> Cli.finish {
             name: "rtl",
@@ -43,40 +43,40 @@ main! = \args ->
         }
         |> Cli.assert_valid
 
-    when Cli.parse_or_display_message cliParser args Arg.to_os_raw is
+    when Cli.parse_or_display_message cli_parser args Arg.to_os_raw is
         Err msg -> Stdout.line! msg
         Ok parsedArgs -> generate! parsedArgs start
 
-generate! : { maybeInputDir : Result Str *, maybeOutputDir : Result Str *, maybeExtension : Result Str * }, Utc => Result {} _
+generate! : { maybe_input_dir : Result Str *, maybe_output_dir : Result Str *, maybe_extension : Result Str * }, Utc => Result {} _
 generate! = \args, start ->
-    inputDir = args.maybeInputDir |> Result.withDefault "."
-    outputDir = args.maybeOutputDir |> Result.withDefault "."
-    extension = args.maybeExtension |> Result.withDefault "rtl" |> Str.withPrefix "."
-    _ = info! "Searching for templates in $(inputDir) with extension $(extension)"
+    input_dir = args.maybe_input_dir |> Result.withDefault "."
+    output_dir = args.maybe_output_dir |> Result.withDefault "."
+    extension = args.maybe_extension |> Result.withDefault "rtl" |> Str.withPrefix "."
+    _ = info! "Searching for templates in $(input_dir) with extension $(extension)"
     paths =
-        Dir.list! inputDir
+        Dir.list! input_dir
         |> Result.map \ps ->
-            keepTemplates ps extension
+            keep_templates ps extension
         |> Result.mapErr \e -> error "Could not list directories: $(Inspect.toStr e)"
         |> try
 
-    invalidTemplateNames =
+    invalid_template_names =
         List.map paths \p ->
-            getFileName p
+            get_file_name p
             |> Str.replaceLast extension ""
-        |> List.dropIf isValidFunctionName
+        |> List.dropIf is_valid_function_name
 
-    if !(List.isEmpty invalidTemplateNames) then
+    if !(List.isEmpty invalid_template_names) then
         error
             """
-            The following templates have invalid names: $(invalidTemplateNames |> Str.joinWith ", ")
+            The following templates have invalid names: $(invalid_template_names |> Str.joinWith ", ")
             Each template must start with a lowercase letter and only contain letters and numbers.
             """
         |> Err
         else
 
     templates =
-        mapTry! paths \path ->
+        map_try! paths \path ->
             File.read_utf8! path
             |> Result.map \template -> { path, template }
             |> Result.mapErr \e -> error "Could not read the templates: $(Inspect.toStr e)"
@@ -86,27 +86,27 @@ generate! = \args, start ->
         info! "No templates found"
         else
 
-    # If the directory already exists, Dir.createAll will return an error. This is fine, so we continue anyway.
+    # If the directory already exists, Dir.create_all! will return an error. This is fine, so we continue anyway.
     _ =
-        Dir.create_all! outputDir
+        Dir.create_all! output_dir
         |> Result.onErr! \_ -> Ok {}
 
-    filePath = "$(outputDir)/Pages.roc"
+    file_path = "$(output_dir)/Pages.roc"
     _ = info! "Compiling templates"
     _ =
-        File.write_utf8! (compile templates extension) filePath
+        File.write_utf8! (compile templates extension) file_path
         |> Result.mapErr \e -> error "Could not write file: $(Inspect.toStr e)"
     time = Utc.delta_as_millis start (Utc.now! {}) |> Num.toStr
-    _ = info! "Generated $(filePath) in $(time)ms"
+    _ = info! "Generated $(file_path) in $(time)ms"
 
-    rocCheck! filePath
+    roc_check! file_path
 
-rocCheck! : Str => Result {} _
-rocCheck! = \filePath ->
-    _ = info! "Running `roc check` on $(filePath)"
+roc_check! : Str => Result {} _
+roc_check! = \file_path ->
+    _ = info! "Running `roc check` on $(file_path)"
 
     Cmd.new "roc"
-    |> Cmd.args ["check", filePath]
+    |> Cmd.args ["check", file_path]
     |> Cmd.status!
     |> Result.onErr \CmdStatusErr err ->
         when err is
@@ -114,8 +114,8 @@ rocCheck! = \filePath ->
             _ -> Err (Exit 1 "")
     |> Result.map \_ -> {}
 
-keepTemplates : List Path, Str -> List Str
-keepTemplates = \paths, extension ->
+keep_templates : List Path, Str -> List Str
+keep_templates = \paths, extension ->
     paths
     |> List.map Path.display
     |> List.keepIf \str -> Str.endsWith str extension
@@ -125,19 +125,19 @@ compile = \templates, extension ->
     templates
     |> List.map \{ path, template } ->
         name =
-            getFileName path
+            get_file_name path
             |> Str.replaceLast extension ""
         { name, nodes: Parser.parse template }
     |> CodeGen.generate
 
-getFileName : Str -> Str
-getFileName = \path ->
+get_file_name : Str -> Str
+get_file_name = \path ->
     when Str.splitOn path "/" is
         [.., filename] -> filename
         _ -> crash "This is a bug! This case should not happen."
 
-isValidFunctionName : Str -> Bool
-isValidFunctionName = \str ->
+is_valid_function_name : Str -> Bool
+is_valid_function_name = \str ->
     bytes = Str.toUtf8 str
     when bytes is
         [first, .. as rest] if 97 <= first && first <= 122 ->
@@ -145,12 +145,12 @@ isValidFunctionName = \str ->
 
         _ -> Bool.false
 
-expect isValidFunctionName "fooBar"
-expect isValidFunctionName "a"
-expect isValidFunctionName "abc123"
-expect isValidFunctionName "123four" |> Bool.not
-expect isValidFunctionName "snake_case" |> Bool.not
-expect isValidFunctionName "punctuation!" |> Bool.not
+expect is_valid_function_name "fooBar"
+expect is_valid_function_name "a"
+expect is_valid_function_name "abc123"
+expect is_valid_function_name "123four" |> Bool.not
+expect is_valid_function_name "snake_case" |> Bool.not
+expect is_valid_function_name "punctuation!" |> Bool.not
 
 isAlphaNumeric : U8 -> Bool
 isAlphaNumeric = \c ->
@@ -166,8 +166,8 @@ error : Str -> [Exit (Num *) Str]
 error = \msg ->
     Exit 1 "\u(001b)[31mERROR:\u(001b)[0m $(msg)"
 
-mapTry! : List input, (input => Result output error) => Result (List output) error
-mapTry! = \list, func! ->
+map_try! : List input, (input => Result output error) => Result (List output) error
+map_try! = \list, func! ->
     help! = \remaining, output ->
         when remaining is
             [] -> Ok output
