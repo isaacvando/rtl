@@ -1,5 +1,6 @@
-app [main] {
-    cli: platform "https://github.com/roc-lang/basic-cli/releases/download/0.17.0/lZFLstMUCUvd5bjnnpYromZJXkQUrdhbva4xdBInicE.tar.br",
+app [main!] {
+    cli: platform "https://github.com/roc-lang/basic-cli/releases/download/0.18.0/0APbwVN1_p1mJ96tXjaoiUCr8NBGamr8G8Ac_DrXR-o.tar.br",
+    weaver: "https://github.com/smores56/weaver/releases/download/0.5.1/nqyqbOkpECWgDUMbY-rG9ug883TVbOimHZFHek-bQeI.tar.br",
 }
 
 import cli.Stdout
@@ -11,21 +12,21 @@ import cli.Cmd
 import cli.Utc exposing [Utc]
 import Parser
 import CodeGen
-import cli.Arg
-import cli.Arg.Opt as Opt
-import cli.Arg.Cli as Cli
+import cli.Arg exposing [Arg]
+import weaver.Opt
+import weaver.Cli
 
-main : Task {} [Exit I32 Str]_
-main =
+main! : List Arg => Result {} [Exit I32 Str]_
+main! = \args ->
 
     start = Utc.now! {}
 
     cliParser : Cli.CliParser { maybeInputDir : _, maybeOutputDir : _, maybeExtension : _ }
     cliParser =
-        { Cli.combine <-
-            maybeInputDir: Opt.maybeStr { short: "i", long: "input-directory", help: "The directory containing the templates to be compiled. Defaults to the current directory." },
-            maybeOutputDir: Opt.maybeStr { short: "o", long: "output-directory", help: "The directory Pages.roc will be written to. Defaults to the current directory." },
-            maybeExtension: Opt.maybeStr { short: "e", long: "extension", help: "The extension of the template files the CLI will search for. Defaults to `rtl`." },
+        { Cli.weave <-
+            maybeInputDir: Opt.maybe_str { short: "i", long: "input-directory", help: "The directory containing the templates to be compiled. Defaults to the current directory." },
+            maybeOutputDir: Opt.maybe_str { short: "o", long: "output-directory", help: "The directory Pages.roc will be written to. Defaults to the current directory." },
+            maybeExtension: Opt.maybe_str { short: "e", long: "extension", help: "The extension of the template files the CLI will search for. Defaults to `rtl`." },
         }
         |> Cli.finish {
             name: "rtl",
@@ -40,23 +41,24 @@ main =
             Get the latest version at https://github.com/isaacvando/rtl.
             """,
         }
-        |> Cli.assertValid
+        |> Cli.assert_valid
 
-    when Cli.parseOrDisplayMessage cliParser (Arg.list! {}) is
-        Err msg -> Stdout.line msg
-        Ok args -> generate! args start
+    when Cli.parse_or_display_message cliParser args Arg.to_os_raw is
+        Err msg -> Stdout.line! msg
+        Ok parsedArgs -> generate! parsedArgs start
 
-generate : { maybeInputDir : Result Str *, maybeOutputDir : Result Str *, maybeExtension : Result Str * }, Utc -> Task {} _
-generate = \args, start ->
+generate! : { maybeInputDir : Result Str *, maybeOutputDir : Result Str *, maybeExtension : Result Str * }, Utc => Result {} _
+generate! = \args, start ->
     inputDir = args.maybeInputDir |> Result.withDefault "."
     outputDir = args.maybeOutputDir |> Result.withDefault "."
     extension = args.maybeExtension |> Result.withDefault "rtl" |> Str.withPrefix "."
-    info! "Searching for templates in $(inputDir) with extension $(extension)"
+    _ = info! "Searching for templates in $(inputDir) with extension $(extension)"
     paths =
-        Dir.list inputDir
-        |> Task.map \paths ->
-            keepTemplates paths extension
-        |> Task.mapErr! \e -> error "Could not list directories: $(Inspect.toStr e)"
+        Dir.list! inputDir
+        |> Result.map \ps ->
+            keepTemplates ps extension
+        |> Result.mapErr \e -> error "Could not list directories: $(Inspect.toStr e)"
+        |> try
 
     invalidTemplateNames =
         List.map paths \p ->
@@ -70,43 +72,47 @@ generate = \args, start ->
             The following templates have invalid names: $(invalidTemplateNames |> Str.joinWith ", ")
             Each template must start with a lowercase letter and only contain letters and numbers.
             """
-        |> Task.err
+        |> Err
         else
 
     templates =
-        taskAll! paths \path ->
-            File.readUtf8 path
-            |> Task.map \template -> { path, template }
-            |> Task.mapErr \e -> error "Could not read the templates: $(Inspect.toStr e)"
+        mapTry! paths \path ->
+            File.read_utf8! path
+            |> Result.map \template -> { path, template }
+            |> Result.mapErr \e -> error "Could not read the templates: $(Inspect.toStr e)"
+        |> try
 
     if List.isEmpty templates then
         info! "No templates found"
         else
 
     # If the directory already exists, Dir.createAll will return an error. This is fine, so we continue anyway.
-    Dir.createAll outputDir
-    |> Task.onErr! \_ -> Task.ok {}
+    _ =
+        Dir.create_all! outputDir
+        |> Result.onErr! \_ -> Ok {}
 
     filePath = "$(outputDir)/Pages.roc"
-    info! "Compiling templates"
-    File.writeUtf8 (compile templates extension) filePath
-    |> Task.mapErr! \e -> error "Could not write file: $(Inspect.toStr e)"
-    time = Utc.deltaAsMillis start (Utc.now! {}) |> Num.toStr
-    info! "Generated $(filePath) in $(time)ms"
+    _ = info! "Compiling templates"
+    _ =
+        File.write_utf8! (compile templates extension) filePath
+        |> Result.mapErr \e -> error "Could not write file: $(Inspect.toStr e)"
+    time = Utc.delta_as_millis start (Utc.now! {}) |> Num.toStr
+    _ = info! "Generated $(filePath) in $(time)ms"
 
     rocCheck! filePath
 
-rocCheck : Str -> Task {} _
-rocCheck = \filePath ->
-    info! "Running `roc check` on $(filePath)"
+rocCheck! : Str => Result {} _
+rocCheck! = \filePath ->
+    _ = info! "Running `roc check` on $(filePath)"
 
     Cmd.new "roc"
     |> Cmd.args ["check", filePath]
-    |> Cmd.status
-    |> Task.onErr \CmdError err ->
+    |> Cmd.status!
+    |> Result.onErr \CmdStatusErr err ->
         when err is
-            ExitCode code -> Task.err (Exit code "")
-            _ -> Task.err (Exit 1 "")
+            ExitCode code -> Err (Exit code "")
+            _ -> Err (Exit 1 "")
+    |> Result.map \_ -> {}
 
 keepTemplates : List Path, Str -> List Str
 keepTemplates = \paths, extension ->
@@ -130,15 +136,6 @@ getFileName = \path ->
         [.., filename] -> filename
         _ -> crash "This is a bug! This case should not happen."
 
-taskAll : List a, (a -> Task b err) -> Task (List b) err
-taskAll = \items, task ->
-    Task.loop { vals: [], rest: items } \{ vals, rest } ->
-        when rest is
-            [] -> Done vals |> Task.ok
-            [item, .. as remaining] ->
-                Task.map (task item) \val ->
-                    Step { vals: List.append vals val, rest: remaining }
-
 isValidFunctionName : Str -> Bool
 isValidFunctionName = \str ->
     bytes = Str.toUtf8 str
@@ -161,10 +158,20 @@ isAlphaNumeric = \c ->
     || (65 <= c && c <= 90)
     || (97 <= c && c <= 122)
 
-info : Str -> Task {} _
-info = \msg ->
+info! : Str => Result {} _
+info! = \msg ->
     Stdout.line! "\u(001b)[34mINFO:\u(001b)[0m $(msg)"
 
 error : Str -> [Exit (Num *) Str]
 error = \msg ->
     Exit 1 "\u(001b)[31mERROR:\u(001b)[0m $(msg)"
+
+mapTry! : List input, (input => Result output error) => Result (List output) error
+mapTry! = \list, func! ->
+    help! = \remaining, output ->
+        when remaining is
+            [] -> Ok output
+            [first, .. as rest] ->
+                result = try func! first
+                help! rest (List.append output result)
+    help! list []
