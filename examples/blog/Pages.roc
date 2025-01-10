@@ -25,7 +25,7 @@ home = \model ->
             """
             
                             <li>
-                                <a href="/posts/$(post.slug |> escapeHtml)">$(post.title |> escapeHtml)</a>
+                                <a href="/posts/$(post.slug |> escape_html)">$(post.title |> escape_html)</a>
                             </li>
                             
             """
@@ -50,13 +50,13 @@ blogPost = \model ->
             <head>
                 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
                 <title>
-                    $(model.post.title |> Format.toUpper |> Result.withDefault "" |> escapeHtml) -
+                    $(model.post.title |> Format.toUpper |> Result.withDefault "" |> escape_html) -
                     Roc Template Example
                 </title>
             </head>
             <body>
                 <div>
-                    <h1>$(model.post.title |> escapeHtml)</h1>
+                    <h1>$(model.post.title |> escape_html)</h1>
                     
         """,
         List.map model.post.content \item ->
@@ -68,18 +68,18 @@ blogPost = \model ->
                     Text t ->
                         """
                         
-                                    <p>$(t |> escapeHtml)</p>
+                                    <p>$(t |> escape_html)</p>
                                     
                         """
                     Code c ->
                         """
                         
-                                    <pre>$(c |> escapeHtml)</pre>
+                                    <pre>$(c |> escape_html)</pre>
                                     
                         """
                     Image i ->
                         """
-                         <img src="$(i |> escapeHtml)" width="100" />
+                         <img src="$(i |> escape_html)" width="100" />
                                     
                         """
                 ,
@@ -101,8 +101,8 @@ blogPost = \model ->
     ]
     |> Str.joinWith ""
 
-escapeHtml : Str -> Str
-escapeHtml = \input ->
+escape_html : Str -> Str
+escape_html = \input ->
     input
     |> Str.replaceEach "&" "&amp;"
     |> Str.replaceEach "<" "&lt;"

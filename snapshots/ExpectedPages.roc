@@ -25,7 +25,7 @@ template = \model ->
         List.map model.items \item ->
             """
             
-                <li>$(item |> escapeHtml)</li>
+                <li>$(item |> escape_html)</li>
                 
             """
         |> Str.joinWith "",
@@ -55,7 +55,7 @@ template = \model ->
         if !model.condition || Bool.false then
             """
             
-                $(Inspect.toStr model.condition |> escapeHtml)
+                $(Inspect.toStr model.condition |> escape_html)
                 
             """
         else
@@ -63,7 +63,7 @@ template = \model ->
         """
         
         
-            <p>Module calculation: $(Math.add 123 345 |> Num.toStr |> escapeHtml)</p>
+            <p>Module calculation: $(Math.add 123 345 |> Num.toStr |> escape_html)</p>
         
             
         """,
@@ -75,7 +75,7 @@ template = \model ->
                 """
             Cat {name: "Gob", age} ->
                 """
-                 Hello Gob, Age: $(Num.toStr age |> escapeHtml)
+                 Hello Gob, Age: $(Num.toStr age |> escape_html)
                     
                 """
             _ ->
@@ -95,8 +95,8 @@ template = \model ->
     ]
     |> Str.joinWith ""
 
-escapeHtml : Str -> Str
-escapeHtml = \input ->
+escape_html : Str -> Str
+escape_html = \input ->
     input
     |> Str.replaceEach "&" "&amp;"
     |> Str.replaceEach "<" "&lt;"

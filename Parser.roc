@@ -5,7 +5,7 @@ Node : [
     Interpolation Str,
     RawInterpolation Str,
     ModuleImport Str,
-    Conditional { condition : Str, trueBranch : List Node, falseBranch : List Node },
+    Conditional { condition : Str, true_branch : List Node, false_branch : List Node },
     Sequence { item : Str, list : Str, body : List Node },
     WhenIs { expression : Str, cases : List { pattern : Str, branch : List Node } },
 ]
@@ -13,28 +13,28 @@ Node : [
 parse : Str -> List Node
 parse = \input ->
     when Str.toUtf8 input |> (many node) is
-        Match { input: [], val } -> combineTextNodes val
+        Match { input: [], val } -> combine_text_nodes val
         Match _ -> crash "There is a bug! Not all input was consumed."
         NoMatch -> crash "There is a bug! The parser didn't match."
 
-combineTextNodes : List Node -> List Node
-combineTextNodes = \nodes ->
+combine_text_nodes : List Node -> List Node
+combine_text_nodes = \nodes ->
     List.walk nodes [] \state, elem ->
         when (state, elem) is
             ([.. as rest, Text t1], Text t2) ->
                 List.append rest (Text (Str.concat t1 t2))
 
-            (_, Conditional { condition, trueBranch, falseBranch }) ->
-                List.append state (Conditional { condition, trueBranch: combineTextNodes trueBranch, falseBranch: combineTextNodes falseBranch })
+            (_, Conditional { condition, true_branch, false_branch }) ->
+                List.append state (Conditional { condition, true_branch: combine_text_nodes true_branch, false_branch: combine_text_nodes false_branch })
 
             (_, Sequence { item, list, body }) ->
-                List.append state (Sequence { item, list, body: combineTextNodes body })
+                List.append state (Sequence { item, list, body: combine_text_nodes body })
 
             (_, WhenIs { expression, cases }) ->
                 combined = WhenIs {
                     expression,
                     cases: List.map cases \{ pattern, branch } ->
-                        { pattern, branch: combineTextNodes branch },
+                        { pattern, branch: combine_text_nodes branch },
                 }
                 List.append state combined
 
@@ -45,138 +45,138 @@ combineTextNodes = \nodes ->
 Parser a : List U8 -> [Match { input : List U8, val : a }, NoMatch]
 
 node =
-    oneOf [
+    one_of [
         text Bool.false,
-        rawInterpolation,
+        raw_interpolation,
         interpolation,
-        importModule,
+        import_module,
         sequence,
-        whenIs,
+        when_is,
         conditional,
         text Bool.true,
     ]
 
 interpolation : Parser Node
 interpolation =
-    manyUntil horizontalByte (string "}}")
-    |> startWith (string "{{")
+    many_until horizontal_byte (string "}}")
+    |> start_with (string "{{")
     |> map \(bytes, _) ->
         bytes
-        |> unsafeFromUtf8
+        |> unsafe_from_utf8
         |> Str.trim
         |> Interpolation
 
-importModule : Parser Node
-importModule =
-    manyUntil horizontalByte (string "|}")
-    |> startWith (string "{|import")
+import_module : Parser Node
+import_module =
+    many_until horizontal_byte (string "|}")
+    |> start_with (string "{|import")
     |> map \(bytes, _) ->
         bytes
-        |> unsafeFromUtf8
+        |> unsafe_from_utf8
         |> Str.trim
         |> ModuleImport
 
-rawInterpolation : Parser Node
-rawInterpolation =
-    manyUntil horizontalByte (string "}}}")
-    |> startWith (string "{{{")
+raw_interpolation : Parser Node
+raw_interpolation =
+    many_until horizontal_byte (string "}}}")
+    |> start_with (string "{{{")
     |> map \(bytes, _) ->
         bytes
-        |> unsafeFromUtf8
+        |> unsafe_from_utf8
         |> Str.trim
         |> RawInterpolation
 
-whenIs : Parser Node
-whenIs =
-    manyUntil horizontalByte (string " |}" |> endWith whitespace)
-    |> startWith (string "{|when ")
-    |> andThen \(expression, _) ->
+when_is : Parser Node
+when_is =
+    many_until horizontal_byte (string " |}" |> end_with whitespace)
+    |> start_with (string "{|when ")
+    |> and_then \(expression, _) ->
 
         case =
-            manyUntil horizontalByte (string " |}")
-            |> startWith (string "{|is ")
-            |> andThen \(pattern, _) ->
+            many_until horizontal_byte (string " |}")
+            |> start_with (string "{|is ")
+            |> and_then \(pattern, _) ->
 
-                manyBefore node (oneOf [string "{|is ", string "{|endwhen|}"])
+                many_before node (one_of [string "{|is ", string "{|endwhen|}"])
                 |> map \branch ->
 
-                    { pattern: unsafeFromUtf8 pattern, branch }
+                    { pattern: unsafe_from_utf8 pattern, branch }
 
-        manyUntil case (string "{|endwhen|}")
+        many_until case (string "{|endwhen|}")
         |> map \(cases, _) ->
 
             WhenIs {
-                expression: unsafeFromUtf8 expression,
+                expression: unsafe_from_utf8 expression,
                 cases,
             }
 
 sequence : Parser Node
 sequence =
-    manyUntil horizontalByte (string " : ")
-    |> startWith (string "{|list ")
-    |> andThen \(item, _) ->
+    many_until horizontal_byte (string " : ")
+    |> start_with (string "{|list ")
+    |> and_then \(item, _) ->
 
-        manyUntil horizontalByte (string " |}")
-        |> andThen \(list, _) ->
+        many_until horizontal_byte (string " |}")
+        |> and_then \(list, _) ->
 
-            manyUntil node (string "{|endlist|}")
+            many_until node (string "{|endlist|}")
             |> map \(body, _) ->
 
                 Sequence {
-                    item: unsafeFromUtf8 item,
-                    list: unsafeFromUtf8 list,
+                    item: unsafe_from_utf8 item,
+                    list: unsafe_from_utf8 list,
                     body: body,
                 }
 
 conditional =
-    manyUntil horizontalByte (string " |}")
-    |> startWith (string "{|if ")
-    |> andThen \(condition, _) ->
+    many_until horizontal_byte (string " |}")
+    |> start_with (string "{|if ")
+    |> and_then \(condition, _) ->
 
-        manyUntil node (oneOf [string "{|endif|}", string "{|else|}"])
-        |> andThen \(trueBranch, separator) ->
+        many_until node (one_of [string "{|endif|}", string "{|else|}"])
+        |> and_then \(true_branch, separator) ->
 
-            parseFalseBranch =
+            parse_false_branch =
                 if separator == "{|endif|}" then
                     \input -> Match { input, val: [] }
                 else
-                    manyUntil node (string "{|endif|}")
+                    many_until node (string "{|endif|}")
                     |> map .0
 
-            parseFalseBranch
-            |> map \falseBranch ->
+            parse_false_branch
+            |> map \false_branch ->
 
                 Conditional {
-                    condition: unsafeFromUtf8 condition,
-                    trueBranch,
-                    falseBranch,
+                    condition: unsafe_from_utf8 condition,
+                    true_branch,
+                    false_branch,
                 }
 
 text : Bool -> Parser Node
-text = \allowTags -> \input ->
-        startsWithTags = \bytes ->
-            List.startsWith bytes ['{', '{'] || List.startsWith bytes ['{', '|']
-        inputStartsWithTags = startsWithTags input
-        if !allowTags && inputStartsWithTags then
-            NoMatch
-        else if inputStartsWithTags then
-            { before, others } = List.splitAt input 2
-            (consumed, remaining) = splitWhen others startsWithTags
+text = \allow_tags -> \input ->
+    starts_with_tags = \bytes ->
+        List.startsWith bytes ['{', '{'] || List.startsWith bytes ['{', '|']
+    input_starts_with_tags = starts_with_tags input
+    if !allow_tags && input_starts_with_tags then
+        NoMatch
+    else if input_starts_with_tags then
+        { before, others } = List.splitAt input 2
+        (consumed, remaining) = split_when others starts_with_tags
 
-            Match {
-                input: remaining,
-                val: List.concat before consumed |> unsafeFromUtf8 |> Text,
-            }
-        else
-            (consumed, remaining) = splitWhen input startsWithTags
+        Match {
+            input: remaining,
+            val: List.concat before consumed |> unsafe_from_utf8 |> Text,
+        }
+    else
+        (consumed, remaining) = split_when input starts_with_tags
 
-            Match {
-                input: remaining,
-                val: unsafeFromUtf8 consumed |> Text,
-            }
+        Match {
+            input: remaining,
+            val: unsafe_from_utf8 consumed |> Text,
+        }
 
-splitWhen : List U8, (List U8 -> Bool) -> (List U8, List U8)
-splitWhen = \bytes, pred ->
+split_when : List U8, (List U8 -> Bool) -> (List U8, List U8)
+split_when = \bytes, pred ->
     help = \acc, remaining ->
         when remaining is
             [first, .. as rest] if !(pred remaining) ->
@@ -194,8 +194,8 @@ string = \str ->
         else
             NoMatch
 
-horizontalByte : Parser U8
-horizontalByte = \input ->
+horizontal_byte : Parser U8
+horizontal_byte = \input ->
     when input is
         [first, .. as rest] if first != '\n' -> Match { input: rest, val: first }
         _ -> NoMatch
@@ -209,21 +209,21 @@ scalar = \byte ->
 
 whitespace : Parser (List U8)
 whitespace =
-    oneOf [scalar ' ', scalar '\t', scalar '\n']
+    one_of [scalar ' ', scalar '\t', scalar '\n']
     |> many
 
 # Combinators
 
-startWith : Parser a, Parser * -> Parser a
-startWith = \parser, start ->
-    andThen start \_ -> parser
+start_with : Parser a, Parser * -> Parser a
+start_with = \parser, start ->
+    and_then start \_ -> parser
 
-endWith : Parser a, Parser * -> Parser a
-endWith = \parser, end ->
-    andThen parser \result -> end |> map \_ -> result
+end_with : Parser a, Parser * -> Parser a
+end_with = \parser, end ->
+    and_then parser \result -> end |> map \_ -> result
 
-oneOf : List (Parser a) -> Parser a
-oneOf = \options ->
+one_of : List (Parser a) -> Parser a
+one_of = \options ->
     when options is
         [] -> \_ -> NoMatch
         [first, .. as rest] ->
@@ -233,7 +233,7 @@ oneOf = \options ->
                 else
                     when first input is
                         Match m -> Match m
-                        NoMatch -> (oneOf rest) input
+                        NoMatch -> (one_of rest) input
 
 many : Parser a -> Parser (List a)
 many = \parser ->
@@ -245,11 +245,11 @@ many = \parser ->
     \input -> help input []
 
 # Match many occurances of a parser until another parser matches. Return the results of both parsers.
-manyUntil : Parser a, Parser b -> Parser (List a, b)
-manyUntil = \parser, end ->
+many_until : Parser a, Parser b -> Parser (List a, b)
+many_until = \parser, end ->
     help = \input, items ->
         when end input is
-            Match endMatch -> Match { input: endMatch.input, val: (items, endMatch.val) }
+            Match end_match -> Match { input: end_match.input, val: (items, end_match.val) }
             NoMatch ->
                 when parser input is
                     NoMatch -> NoMatch
@@ -258,8 +258,8 @@ manyUntil = \parser, end ->
     \input -> help input []
 
 # Match many occurances of a parser before another parser matches. Do not consume input for the ending parser.
-manyBefore : Parser a, Parser b -> Parser (List a)
-manyBefore = \parser, end ->
+many_before : Parser a, Parser b -> Parser (List a)
+many_before = \parser, end ->
     help = \input, items ->
         when end input is
             Match _ -> Match { input, val: items }
@@ -270,8 +270,8 @@ manyBefore = \parser, end ->
 
     \input -> help input []
 
-andThen : Parser a, (a -> Parser b) -> Parser b
-andThen = \parser, mapper ->
+and_then : Parser a, (a -> Parser b) -> Parser b
+and_then = \parser, mapper ->
     \input ->
         when parser input is
             NoMatch -> NoMatch
@@ -284,7 +284,7 @@ map = \parser, mapper ->
             Match { input, val } -> Match { input, val: mapper val }
             NoMatch -> NoMatch
 
-unsafeFromUtf8 = \bytes ->
+unsafe_from_utf8 = \bytes ->
     when Str.fromUtf8 bytes is
         Ok s -> s
         Err _ ->
@@ -325,7 +325,7 @@ expect
 # simple inline conditional
 expect
     result = parse "{|if x > y |}foo{|endif|}"
-    result == [Conditional { condition: "x > y", trueBranch: [Text "foo"], falseBranch: [] }]
+    result == [Conditional { condition: "x > y", true_branch: [Text "foo"], false_branch: [] }]
 
 # conditional
 expect
@@ -335,7 +335,7 @@ expect
         foo
         {|endif|}
         """
-    result == [Conditional { condition: "x > y", trueBranch: [Text "\nfoo\n"], falseBranch: [] }]
+    result == [Conditional { condition: "x > y", true_branch: [Text "\nfoo\n"], false_branch: [] }]
 
 # if else
 expect
@@ -351,8 +351,8 @@ expect
     == [
         Conditional {
             condition: "model.field",
-            trueBranch: [Text "\nHello\n"],
-            falseBranch: [Text "\ngoodbye\n"],
+            true_branch: [Text "\nHello\n"],
+            false_branch: [Text "\ngoodbye\n"],
         },
     ]
 
@@ -370,12 +370,12 @@ expect
     == [
         Conditional {
             condition: "model.someField",
-            trueBranch: [
+            true_branch: [
                 Text "\n",
-                Conditional { condition: "Bool.false", trueBranch: [Text "\nbar\n"], falseBranch: [] },
+                Conditional { condition: "Bool.false", true_branch: [Text "\nbar\n"], false_branch: [] },
                 Text "\n",
             ],
-            falseBranch: [],
+            false_branch: [],
         },
     ]
 
@@ -400,7 +400,7 @@ expect
 expect
     result = parse
         "{|if Bool.true |}{|import SomeModule |}{|endif|}"
-    result == [Conditional { condition: "Bool.true", trueBranch: [ModuleImport "SomeModule"], falseBranch: [] }]
+    result == [Conditional { condition: "Bool.true", true_branch: [ModuleImport "SomeModule"], false_branch: [] }]
 
 # paragraph containing conditional
 expect
@@ -415,7 +415,7 @@ expect
     result
     == [
         Text "<p>\n    ",
-        Conditional { condition: "foo", trueBranch: [Text "\n    bar\n    "], falseBranch: [] },
+        Conditional { condition: "foo", true_branch: [Text "\n    bar\n    "], false_branch: [] },
         Text "\n</p>",
     ]
 
@@ -429,7 +429,7 @@ expect
     ==
     [
         Text "<div>",
-        Conditional { condition: "model.username == \"isaac\"", trueBranch: [Text "Hello"], falseBranch: [] },
+        Conditional { condition: "model.username == \"isaac\"", true_branch: [Text "Hello"], false_branch: [] },
         Text "</div>",
     ]
 
@@ -554,8 +554,8 @@ expect
             """
             "🥝" == "🥝"
             """,
-            trueBranch: [Text "foo"],
-            falseBranch: [],
+            true_branch: [Text "foo"],
+            false_branch: [],
         },
     ]
 
