@@ -78,11 +78,11 @@ escape_html =
     escape_html : Str -> Str
     escape_html = \\input ->
         input
-        |> Str.replaceEach "&" "&amp;"
-        |> Str.replaceEach "<" "&lt;"
-        |> Str.replaceEach ">" "&gt;"
-        |> Str.replaceEach "\\"" "&quot;"
-        |> Str.replaceEach "'" "&#39;"
+        |> Str.replace_each "&" "&amp;"
+        |> Str.replace_each "<" "&lt;"
+        |> Str.replace_each ">" "&gt;"
+        |> Str.replace_each "\\"" "&quot;"
+        |> Str.replace_each "'" "&#39;"
     """
 
 RenderNode : [
@@ -116,7 +116,7 @@ render_nodes = |nodes|
             [
             ${list}
             ]
-            |> Str.joinWith ""
+            |> Str.join_with ""
             """
             |> indent
 
@@ -142,7 +142,7 @@ to_str = |node|
                 """
                 List.map ${list} \\${item} ->
                 ${render_nodes(body)}
-                |> Str.joinWith ""
+                |> Str.join_with ""
                 """
 
             WhenIs({ expression, cases }) ->

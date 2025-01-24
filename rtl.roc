@@ -149,22 +149,23 @@ is_valid_function_name = |str|
     bytes = Str.to_utf8(str)
     when bytes is
         [first, .. as rest] if 97 <= first and first <= 122 ->
-            List.all(rest, is_alpha_numeric)
+            List.all(rest, is_snake_case_char)
 
         _ -> Bool.false
 
-expect is_valid_function_name("fooBar")
+expect is_valid_function_name("foo_bar")
 expect is_valid_function_name("a")
-expect is_valid_function_name("abc123")
-expect is_valid_function_name("123four") |> Bool.not
-expect is_valid_function_name("snake_case") |> Bool.not
+expect is_valid_function_name("abc_123")
+expect is_valid_function_name("123_four") |> Bool.not
+expect is_valid_function_name("fooBar") |> Bool.not
 expect is_valid_function_name("punctuation!") |> Bool.not
 
-is_alpha_numeric : U8 -> Bool
-is_alpha_numeric = |c|
-    (48 <= c and c <= 57)
-    or (65 <= c and c <= 90)
-    or (97 <= c and c <= 122)
+is_snake_case_char : U8 -> Bool
+is_snake_case_char = |c|
+    (48 <= c and c <= 57) # numbers
+    or (97 <= c and c <= 122) # lowercase letters
+    or c
+    == 95 # underscore
 
 info! : Str => Result {} _
 info! = |msg|
