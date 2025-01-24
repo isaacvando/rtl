@@ -5,10 +5,12 @@ app [main!] {
 import cli.Stdout
 import Pages
 
-main! = \_ ->
-    Pages.template {
-        items: ["first", "second", "third", "fourth", "fifth"],
-        condition: Bool.true,
-        animal: Cat { name: "Gob", age: 10 },
-    }
+main! = |_|
+    Pages.template(
+        {
+            items: ["first", "second", "third", "fourth", "fifth"],
+            condition: Bool.true,
+            animal: Cat({ name: "Gob", age: 10 }),
+        },
+    )
     |> Stdout.line!

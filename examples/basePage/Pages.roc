@@ -3,18 +3,16 @@ module [
     first,
     base,
     second,
-    ]
+]
 
-
-
-first = \model ->
+first = |model|
     """
-    <p>This is the innner content of the page for <em>first</em>. Here's a value: $(model.foo |> escape_html) </p>
+    <p>This is the innner content of the page for <em>first</em>. Here's a value: ${model.foo |> escape_html} </p>
     <a href="/second">second</a>
-    
+
     """
 
-base = \model ->
+base = |model|
     """
     <!DOCTYPE html>
     <html>
@@ -24,25 +22,25 @@ base = \model ->
     </head>
     <body>
         <h1>We want to reuse the outer parts of this page on every page of the website.</h1>
-        $(model.content)
-    
+        ${model.content}
+
         <footer>2024 RTL</footer>
     </body>
     </html>
-    
+
     """
 
-second = \model ->
+second = |model|
     """
-    <p>This is a different inner content! Here's another value: $(Num.toStr model.bar |> escape_html)</p>
+    <p>This is a different inner content! Here's another value: ${Num.to_str(model.bar) |> escape_html}</p>
     <a href="/first">first</a>
     """
 
 escape_html : Str -> Str
-escape_html = \input ->
+escape_html = |input|
     input
-    |> Str.replaceEach "&" "&amp;"
-    |> Str.replaceEach "<" "&lt;"
-    |> Str.replaceEach ">" "&gt;"
-    |> Str.replaceEach "\"" "&quot;"
-    |> Str.replaceEach "'" "&#39;"
+    |> Str.replace_each("&", "&amp;")
+    |> Str.replace_each("<", "&lt;")
+    |> Str.replace_each(">", "&gt;")
+    |> Str.replace_each("\"", "&quot;")
+    |> Str.replace_each("'", "&#39;")

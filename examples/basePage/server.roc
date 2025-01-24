@@ -4,29 +4,39 @@ import Pages
 
 Model : {}
 
-init! = \{} -> Ok {}
+init! = |{}| Ok({})
 
-respond! = \req, _ ->
-    when Str.splitOn req.uri "/" |> List.dropFirst 1 is
+respond! = |req, _|
+    when Str.split_on(req.uri, "/") |> List.drop_first(1) is
         ["first"] ->
-            Pages.base {
-                content: Pages.first {
-                    foo: "very nice string",
+            Pages.base(
+                {
+                    content: Pages.first(
+                        {
+                            foo: "very nice string",
+                        },
+                    ),
                 },
-            }
+            )
             |> success
 
         ["second"] | _ ->
-            Pages.base {
-                content: Pages.second {
-                    bar: 100,
+            Pages.base(
+                {
+                    content: Pages.second(
+                        {
+                            bar: 100,
+                        },
+                    ),
                 },
-            }
+            )
             |> success
 
-success = \body ->
-    Ok {
-        status: 200,
-        headers: [{ name: "Content-Type", value: "text/html" }],
-        body: body |> Str.toUtf8,
-    }
+success = |body|
+    Ok(
+        {
+            status: 200,
+            headers: [{ name: "Content-Type", value: "text/html" }],
+            body: body |> Str.to_utf8,
+        },
+    )

@@ -5,10 +5,12 @@ app [main!] {
 import cli.Stdout
 import Pages
 
-main! = \_ ->
-    Pages.lorem {
-        name: "Benchmark",
-        color: Red,
-        items: List.range { start: At 0, end: At 500 },
-    }
+main! = |_|
+    Pages.lorem(
+        {
+            name: "Benchmark",
+            color: Red,
+            items: List.range({ start: At(0), end: At(500) }),
+        },
+    )
     |> Stdout.line!
