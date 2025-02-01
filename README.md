@@ -9,11 +9,11 @@ First write a template like `hello.rtl`:
 
 <ul>
   {|list number : model.numbers |}
-  <li>{{ Num.toStr number }}</li>
+  <li>{{ Num.to_str(number) }}</li>
   {|endlist|}
 </ul>
 
-{|if model.isSubscribed |}
+{|if model.is_subscribed |}
 <a href="/subscription">Subscription</a>
 {|else|}
 <a href="/signup">Sign up</a>
@@ -25,11 +25,11 @@ Then run `rtl` in the directory containing `hello.rtl` to generate `Pages.roc`.
 Now you can call the generated function
 
 ```roc
-Pages.hello {
+Pages.hello({
         name: "World",
         numbers: [1, 2, 3],
         isSubscribed: Bool.true,
-    }
+    })
 ```
 
 to generate your HTML!
@@ -72,13 +72,13 @@ The generated file, `Pages.roc`, becomes a normal part of your Roc project, so y
 To interpolate a value into the document, use double curly brackets:
 
 ```
-{{ model.firstName }}
+{{ model.first_name }}
 ```
 
 The value between the brackets must be a `Str`, so conversions may be necessary:
 
 ```
-{{ 2 |> Num.toStr }}
+{{ Num.to_str(2) }}
 ```
 
 HTML in the interpolated string will be escaped to prevent security issues like XSS.
@@ -97,7 +97,7 @@ The pattern can be any normal Roc pattern so things like this are also valid:
 
 ```html
 {|list (x,y) : [(1,2),(3,4)] |}
-<p>X: {{ x |> Num.toStr }}, Y: {{ y |> Num.toStr }}</p>
+<p>X: {{ Num.to_str(x) }}, Y: {{ Num.to_str(y) }}</p>
 {|endlist|}
 ```
 
@@ -107,8 +107,8 @@ Use when is expressions like this:
 
 ```
 {|when x |}
-    {|is Ok y |} The result was ok!
-    {|is Err _ |} The result was an error!
+    {|is Ok(y) |} The result was ok!
+    {|is Err(_)|} The result was an error!
 {|endwhen|}
 ```
 
@@ -137,7 +137,7 @@ Or with an else block:
 If it is necessary to insert content without escaping HTML, use triple brackets.
 
 ```
-{{{ model.dynamicHtml }}}
+{{{ model.dynamic_html }}}
 ```
 
 This is useful for generating content types other than HTML or combining multiple templates into one final HTML output.
