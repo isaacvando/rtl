@@ -1,4 +1,4 @@
 module [add]
 
-add = \x, y ->
+add = |x, y|
     x + y

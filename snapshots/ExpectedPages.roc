@@ -28,7 +28,7 @@ template = \model ->
                 <li>$(item |> escape_html)</li>
                 
             """
-        |> Str.joinWith "",
+        |> Str.join_with "",
         """
         
             </ol>
@@ -55,7 +55,7 @@ template = \model ->
         if !model.condition || Bool.false then
             """
             
-                $(Inspect.toStr model.condition |> escape_html)
+                $(Inspect.to_str model.condition |> escape_html)
                 
             """
         else
@@ -63,7 +63,7 @@ template = \model ->
         """
         
         
-            <p>Module calculation: $(Math.add 123 345 |> Num.toStr |> escape_html)</p>
+            <p>Module calculation: $(Math.add 123 345 |> Num.to_str |> escape_html)</p>
         
             
         """,
@@ -75,7 +75,7 @@ template = \model ->
                 """
             Cat {name: "Gob", age} ->
                 """
-                 Hello Gob, Age: $(Num.toStr age |> escape_html)
+                 Hello Gob, Age: $(Num.to_str age |> escape_html)
                     
                 """
             _ ->
@@ -93,13 +93,13 @@ template = \model ->
         
         """
     ]
-    |> Str.joinWith ""
+    |> Str.join_with ""
 
 escape_html : Str -> Str
 escape_html = \input ->
     input
-    |> Str.replaceEach "&" "&amp;"
-    |> Str.replaceEach "<" "&lt;"
-    |> Str.replaceEach ">" "&gt;"
-    |> Str.replaceEach "\"" "&quot;"
-    |> Str.replaceEach "'" "&#39;"
+    |> Str.replace_each "&" "&amp;"
+    |> Str.replace_each "<" "&lt;"
+    |> Str.replace_each ">" "&gt;"
+    |> Str.replace_each "\"" "&quot;"
+    |> Str.replace_each "'" "&#39;"

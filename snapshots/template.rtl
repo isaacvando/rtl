@@ -22,14 +22,14 @@
     {|endif|}
 
     {|if !model.condition || Bool.false |}
-    {{Inspect.toStr model.condition}}
+    {{Inspect.to_str model.condition}}
     {|endif|}
 
-    <p>Module calculation: {{ Math.add 123 345 |> Num.toStr }}</p>
+    <p>Module calculation: {{ Math.add 123 345 |> Num.to_str }}</p>
 
     {|when model.animal |}
     {|is Dog "fido" |} Hello Fido
-    {|is Cat {name: "Gob", age} |} Hello Gob, Age: {{ Num.toStr age }}
+    {|is Cat {name: "Gob", age} |} Hello Gob, Age: {{ Num.to_str age }}
     {|is _ |} Sorry, don't know that animal
     {|endwhen|}
 
